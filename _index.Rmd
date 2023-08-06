@@ -1,0 +1,505 @@
+---
+title: College Tables
+output:
+  rmdformats::readthedown:
+    self_contained: false
+    includes:
+      in_header: GA_Script.html
+params:
+  index_table: "nothing"
+---
+
+This has info on several thousand colleges and universities in the US. To filter for individual schools, start typing any part of the school's name in the institution box. After clicking one, you can keep typing and add more to the list. Below the table are more filtering options.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE, asis=TRUE}
+source("_packages.R")
+source("R/functions.R")
+index_table$PopupLabel <- paste0("<a href='", index_table$UNITID, ".html'>", index_table$Institution, "</a>")
+index_table$Longitude <- as.numeric(index_table$Longitude)
+index_table$Latitude <- as.numeric(index_table$Latitude)
+index_table$Category[nchar(index_table$Category)<2] <- "Not reported"
+index_table$Category[is.na(index_table$Category)] <- "Not reported"
+all_colleges <- index_table
+all_colleges <- subset(all_colleges, all_colleges$Active=="Yes")
+all_colleges$netprice <- as.numeric(all_colleges$`Average net price for students with financial aid`)
+all_colleges$percentfreshmenwomen <- as.numeric(all_colleges$`Freshmen % Female`)
+all_colleges$percentfreshmenwhite <- as.numeric(all_colleges$`Freshmen % White`)
+all_colleges$percentfreshmenblack <- as.numeric(all_colleges$`Freshmen % Black or African American`)
+all_colleges$percentfreshmenasian <- as.numeric(all_colleges$`Freshmen % Asian`)
+all_colleges$percentfreshmenamericanindian <- as.numeric(all_colleges$`Freshmen % American Indian or Alaskan Native`)
+all_colleges$percentfreshmenhispanic <- as.numeric(all_colleges$`Freshmen % Hispanic`)
+all_colleges$percentfreshmenpacificislander <- as.numeric(all_colleges$`Freshmen % Pacific Islander`)
+all_colleges$percentcontraceptivesupport <- as.numeric(all_colleges$`State rep support for contraception`)
+all_colleges$interracialsamesexmarriage <- as.numeric(all_colleges$`State support for interracial and same-sex marriage`)
+all_colleges$gradratesixyear <- as.numeric(all_colleges$`Grad rate in six years`)
+
+
+all_colleges <- SharedData$new(all_colleges)
+
+crosstalk::filter_select("inst", "Institution", all_colleges, ~Institution)
+```
+
+You can search to filter by various columns: only show ones in certain states (two letter abbreviation), certain athletic leagues, by college name, etc. To search for phrases, put them in quotes. **Click on buttons to show different tables of information** (and info in one table will be used to filter the other ones). Go to the [about](about.html) page for more about the sources of the data. **Click on a school name to get a page with much more detail about that school.** To look at info by field, go to the [fields](fields_overview.html) page.
+
+Since much of the data come from the US federal government, this website includes only US-based schools. The rest of the planet has excellent institutions which may be a better placement for some.
+
+
+
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE, asis=TRUE}
+
+index_conversions <- read.csv("data/ConversionToIndexTable.csv")
+
+category_orderings <- c('Overview', "Location", "Admissions", "Finances", "Academics", "Student Life", "Safety", "Freshmen demographics")
+
+for (focal_category in category_orderings) {
+	focal_columns <- index_conversions$Rename[index_conversions$Category==focal_category] 
+	focal_columns <- paste0("Reactable.toggleHideColumn('college-list', '", focal_columns, "')")
+	htmltools::tags$script(paste0("function toggle", tolower(gsub(" ", "_", focal_category)), "() {\n", focal_columns, "\n}", collapse = "; "))
+}
+
+# I should be able to do this with a loop, but it does not render properly to the site if I do. So hardcoding it is. With the advantage of setting the order.
+
+htmltools::tags$script("
+  function toggle_admissions() {
+  Reactable.toggleHideColumn('college-list', 'Admission percentage total')
+  Reactable.toggleHideColumn('college-list', 'Yield percentage total')
+  Reactable.toggleHideColumn('college-list', 'SAT 25th percentile')
+  Reactable.toggleHideColumn('college-list', 'SAT 75th percentile')
+  Reactable.toggleHideColumn('college-list', 'ACT 25th percentile')
+  Reactable.toggleHideColumn('college-list', 'ACT 75th percentile')
+  }
+")
+
+htmltools::tags$script("
+	function toggle_student_finances() {
+ 	Reactable.toggleHideColumn('college-list', 'Average net price for students with financial aid')
+	Reactable.toggleHideColumn('college-list', 'Percent of undergrads with financial aid')
+	Reactable.toggleHideColumn('college-list', 'Percent of undergrads with Pell grants')
+	Reactable.toggleHideColumn('college-list', 'Students can get federal financial aid')
+  }
+")
+
+htmltools::tags$script("
+	function toggle_freshmen_demo() {
+	Reactable.toggleHideColumn('college-list', 'Freshmen % Female')
+	Reactable.toggleHideColumn('college-list', 'Freshmen % Male ')
+	Reactable.toggleHideColumn('college-list', 'Freshmen % American Indian or Alaskan Native')
+	Reactable.toggleHideColumn('college-list', 'Freshmen % Asian')
+	Reactable.toggleHideColumn('college-list', 'Freshmen % Black or African American')
+	Reactable.toggleHideColumn('college-list', 'Freshmen % Hispanic')
+	Reactable.toggleHideColumn('college-list', 'Freshmen % Nonresident alien percentage')
+	Reactable.toggleHideColumn('college-list', 'Freshmen % Pacific Islander')
+	Reactable.toggleHideColumn('college-list', 'Freshmen % White')
+	Reactable.toggleHideColumn('college-list', 'Freshmen % Two or more races')
+	}
+")
+
+htmltools::tags$script("
+	function toggle_graduation_demo() {
+	Reactable.toggleHideColumn('college-list', 'Grad rate in four years')
+	Reactable.toggleHideColumn('college-list', 'Transfer out rate')
+	Reactable.toggleHideColumn('college-list', 'Grad rate in six years')
+	Reactable.toggleHideColumn('college-list', 'Grad rate women')
+	Reactable.toggleHideColumn('college-list', 'Grad rate men')
+	Reactable.toggleHideColumn('college-list', 'Grad rate American Indian or Alaska Native')
+	Reactable.toggleHideColumn('college-list', 'Grad rate Asian')
+	Reactable.toggleHideColumn('college-list', 'Grad rate Black or African American')
+	Reactable.toggleHideColumn('college-list', 'Grad rate Hispanic')
+	Reactable.toggleHideColumn('college-list', 'Grad rate Nonresident alien')
+	Reactable.toggleHideColumn('college-list', 'Grad rate Pacific Islander')
+	Reactable.toggleHideColumn('college-list', 'Grad rate White')
+	Reactable.toggleHideColumn('college-list', 'Grad rate Two or more races')
+	}
+")
+
+htmltools::tags$script("
+	function toggle_student_life() {
+	Reactable.toggleHideColumn('college-list', 'Freshmen required to live on campus')
+	Reactable.toggleHideColumn('college-list', 'On campus housing available')
+	Reactable.toggleHideColumn('college-list', 'Percent of undergrads registered with disabilities')
+	}
+")
+
+htmltools::tags$script("
+	function toggle_institution_health() {
+	Reactable.toggleHideColumn('college-list', 'Revenue minus expenses')
+	Reactable.toggleHideColumn('college-list', 'Full-time undergrad enrollment trend')
+	Reactable.toggleHideColumn('college-list', 'Percent of revenue from tuition and fees')
+	Reactable.toggleHideColumn('college-list', 'Percent of revenue from private gifts grants and contracts')
+	Reactable.toggleHideColumn('college-list', 'Percent of revenue from government appropriations')
+	Reactable.toggleHideColumn('college-list', 'Percent of revenue from government grants and contracts')
+	Reactable.toggleHideColumn('college-list', 'Censured by AAUP')
+	}
+")
+
+htmltools::tags$script("
+	function toggle_location() {
+	Reactable.toggleHideColumn('college-list', 'Size and setting')
+	Reactable.toggleHideColumn('college-list', 'Biome')
+	Reactable.toggleHideColumn('college-list', 'Ecological region')
+	Reactable.toggleHideColumn('college-list', 'Realm')
+	Reactable.toggleHideColumn('college-list', 'Urbanization')
+	Reactable.toggleHideColumn('college-list', 'Miles to mountains')
+	Reactable.toggleHideColumn('college-list', 'Abortion availability')
+	Reactable.toggleHideColumn('college-list', 'California travel ban')
+	Reactable.toggleHideColumn('college-list', 'Gun law stringency')
+	Reactable.toggleHideColumn('college-list', 'State rep support for contraception')
+	Reactable.toggleHideColumn('college-list', 'State support for interracial and same-sex marriage')
+	}
+")
+
+htmltools::tags$script("
+	function toggle_general() {
+	Reactable.toggleHideColumn('college-list', 'Category')
+	Reactable.toggleHideColumn('college-list', 'Enrollment profile')
+	Reactable.toggleHideColumn('college-list', 'Highest degree')
+	Reactable.toggleHideColumn('college-list', 'Classification')
+	Reactable.toggleHideColumn('college-list', 'HBCU')
+	Reactable.toggleHideColumn('college-list', 'Tribal College')
+	Reactable.toggleHideColumn('college-list', 'Tenure-stream faculty')
+	Reactable.toggleHideColumn('college-list', 'Non-tenure stream faculty')
+	Reactable.toggleHideColumn('college-list', 'Undergrad full time')
+	Reactable.toggleHideColumn('college-list', 'Grad full time')
+	Reactable.toggleHideColumn('college-list', 'Digital library circulations per students and faculty')
+	Reactable.toggleHideColumn('college-list', 'Physical library circulations per students and faculty')
+	}
+")
+
+```	
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE, asis=TRUE}
+
+
+
+options(reactable.theme = reactableTheme(
+  stripedColor = "gray"
+))
+
+
+tagList(tags$button(
+	"Admissions",
+	onclick = "toggle_admissions()"
+))
+
+
+tagList(tags$button(
+	"General info",
+	onclick = "toggle_general()"
+))
+
+tagList(tags$button(
+	"Student finances",
+	onclick = "toggle_student_finances()"
+))
+
+tagList(tags$button(
+	"Student life",
+	onclick = "toggle_student_life()"
+))
+
+tagList(tags$button(
+	"Freshmen demographics",
+	onclick = "toggle_freshmen_demo()"
+))
+
+tagList(tags$button(
+	"Graduation rates",
+	onclick = "toggle_graduation_demo()"
+))
+
+tagList(tags$button(
+	"Institution health",
+	onclick = "toggle_institution_health()"
+))
+
+tagList(tags$button(
+	"Location info",
+	onclick = "toggle_location()"
+))
+
+reactable(
+  all_colleges,
+  filterable = FALSE,
+  columns = list(
+    Institution = colDef(html = TRUE, show=TRUE, sticky="left", cell = JS('
+    function(cellInfo) {
+      // Render as a link
+      const url = `${cellInfo.row["UNITID"]}.html`
+      return `<a href="${url}" target="_blank">${cellInfo.value}</a>`
+    }
+  ')), 
+  City = colDef(show=TRUE),
+  State = colDef(show=TRUE),
+  `Admission percentage men`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Admission percentage total`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Admission percentage women`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Freshmen % American Indian or Alaskan Native`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Freshmen % Asian`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Freshmen % Black or African American`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Freshmen % Female`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Freshmen % Hispanic`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Freshmen % Male `= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Freshmen % Nonresident alien percentage`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Freshmen % Pacific Islander`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Freshmen % Two or more races`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Freshmen % White`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Grad rate American Indian or Alaska Native`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Grad rate Asian`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Grad rate Black or African American`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Grad rate Hispanic`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Grad rate in four years`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Grad rate in six years`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Grad rate Men`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Grad rate Nonresident alien`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Grad rate Pacific Islander`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Grad rate Two or more races`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Grad rate White`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Grad rate Women`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Percent of revenue from government appropriations`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Percent of revenue from government grants and contracts`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Percent of revenue from private gifts grants and contracts`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Percent of revenue from tuition and fees`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Percent of undergrads with financial aid`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Percent of undergrads with Pell grants`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`State rep support for contraception`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`State support for interracial and same-sex marriage`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Transfer out rate`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Yield percentage men`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Yield percentage total`= colDef(format = colFormat(suffix = ' %'), show = FALSE),
+`Yield percentage women`= colDef(format = colFormat(suffix = ' %'), show = FALSE)
+  ),
+  defaultColDef = colDef(
+	show = FALSE
+  ),
+  selection = "multiple",
+  onClick = "select",
+  defaultPageSize = 20,
+  elementId = "college-list",
+  striped = TRUE
+)
+
+```
+
+# Map
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE}
+leaflet(all_colleges) %>%
+  addTiles() %>%  
+  setView(lng = -110, lat = 48, zoom = 3) %>%
+  addCircleMarkers(data = all_colleges, lng = ~Longitude, lat = ~Latitude, popup = ~PopupLabel, radius=3, fillOpacity=0.5)
+
+  #addMarkers(data = all_colleges, lng = ~Longitude, lat = ~Latitude, popup = ~PopupLabel, clusterOptions = markerClusterOptions())
+```
+
+# More filters
+
+
+## Location
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE, asis=TRUE}
+
+
+crosstalk::filter_select("State", "State", all_colleges, ~State)
+
+crosstalk::filter_select("City", "City", all_colleges, ~City)
+
+crosstalk::filter_checkbox("CAban", "California travel ban", all_colleges, ~`California travel ban`)
+
+crosstalk::filter_checkbox("AbortionAvail", "Abortion availability", all_colleges, ~`Abortion availability`)
+
+crosstalk::filter_checkbox("TransSafety", "Anti-trans legislative risk", all_colleges, ~`Anti-trans legislative risk`)
+
+
+crosstalk::filter_slider("contraceptionsupport", "State rep support for contraception", all_colleges, "percentcontraceptivesupport")
+
+crosstalk::filter_slider("interracialsamesex", "State rep support for interracial and same-sex marriage", all_colleges, "interracialsamesexmarriage")
+
+crosstalk::filter_select("biome", "Biome", all_colleges, ~`Biome`)
+
+crosstalk::filter_slider("milestomountains", "Miles to mountains", all_colleges, "Miles to mountains")
+
+```	
+
+## College traits
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE, asis=TRUE}
+
+crosstalk::filter_select("athleticconference", "Athletic conference", all_colleges, ~`Athletic conference`)
+
+crosstalk::filter_slider("price", "Average net price", all_colleges, "netprice", min = 0, step = 1000)
+
+crosstalk::filter_slider("gradratesixyearslider", "Graduation rate (six years)", all_colleges, "gradratesixyear")
+
+crosstalk::filter_checkbox("HCBU", "HBCU", all_colleges, ~`HBCU`)
+
+crosstalk::filter_checkbox("Tribal", "Tribal College", all_colleges, ~`Tribal College`)
+
+crosstalk::filter_checkbox("Category", "Institution category", all_colleges, ~`Category`)
+
+crosstalk::filter_checkbox("SizeSetting", "Size and setting", all_colleges, ~`Size and setting`)
+
+crosstalk::filter_checkbox("EnrollmentProfile", "Enrollment profile", all_colleges, ~`Enrollment profile`)
+
+crosstalk::filter_checkbox("type", "Institution type", all_colleges, ~`Overall type`)
+
+crosstalk::filter_checkbox("enrollment", "Full-time undergrad enrollment trend", all_colleges, ~`Full-time undergrad enrollment trend`)
+
+```	
+
+## Freshmen demographics
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE, asis=TRUE}
+
+
+crosstalk::filter_slider("percentwomen", "Percent of women in freshman class", all_colleges, "percentfreshmenwomen")
+
+crosstalk::filter_slider("percentwhite", "Percent of white students in freshman class", all_colleges, "percentfreshmenwhite")
+
+crosstalk::filter_slider("percentblack", "Percent of black students in freshman class", all_colleges, "percentfreshmenblack")
+
+crosstalk::filter_slider("percentasian", "Percent of Asian students in freshman class", all_colleges, "percentfreshmenasian")
+
+crosstalk::filter_slider("percentamericanindian", "Percent of American Indian students in freshman class", all_colleges, "percentfreshmenamericanindian")
+
+crosstalk::filter_slider("percentpacificislander", "Percent of Pacific Islander students in freshman class", all_colleges, "percentfreshmenpacificislander")
+
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=FALSE}
+
+if(nrow(all_colleges)>0) {
+	
+	index_conversions <- read.csv("data/ConversionToIndexTable.csv")
+
+	Overview <- c("Institution", index_conversions$Rename[index_conversions$Category=="Overview"])
+
+	Finances <- c("Institution", index_conversions$Rename[index_conversions$Category=="Finances"])
+	
+	Location <- c("Institution", index_conversions$Rename[index_conversions$Category=="Location"])
+	
+	Admissions <- c("Institution", index_conversions$Rename[index_conversions$Category=="Admissions"])
+	
+	Outcomes <- c("Institution", index_conversions$Rename[index_conversions$Category=="Outcomes"])
+	
+	Resources <- c("Institution", index_conversions$Rename[index_conversions$Category=="Resources"])
+	
+	Student_life <- c("Institution", index_conversions$Rename[index_conversions$Category=="Student life"])
+	
+	Freshmen_demographics <- c("Institution", index_conversions$Rename[index_conversions$Category=="Freshmen demographics"])
+	
+	Safety <- c("Institution", index_conversions$Rename[index_conversions$Category=="Safety"])
+	
+	Revenue_sources <- c("Institution", index_conversions$Rename[index_conversions$Category=="Revenue sources"])
+
+	# for (col_index in sequence(ncol(all_colleges))) {
+	# 		all_colleges[,col_index] <- gsub('$NaN', '', all_colleges[,col_index])
+	# }
+	#all_colleges$State <- state.name[match(all_colleges$State,state.abb)]
+	
+	
+	GetMatchingColumnsInOverview <- function(to_find) {
+		return(c(match( to_find, colnames(all_colleges)))	)
+	}
+
+	GetNotMatchingColumnsInOverview <- function(to_find) {
+		unmatched <- setdiff(colnames(all_colleges), unique(c(to_find)))
+		return(match(unmatched, colnames(all_colleges)))	
+	}
+	rownames(all_colleges) <- all_colleges$Institution
+	all_colleges <- 
+	datatable_output <- DT::datatable(
+		all_colleges, 
+		rownames=TRUE, 
+		escape=FALSE, 
+		extensions = c('Buttons', 'SearchPanes', 'Select'),
+		options=list(
+			dom = 'Bfrtip',
+			pageLength = 100,
+			columnDefs = list(
+						list(targets = GetMatchingColumnsInOverview(Overview), visible = TRUE),
+						list(targets = "_all", className = 'dt-center', visible = FALSE)
+						),
+			buttons = list(
+				"searchPanes",
+				list(
+					extend= "colvisGroup", 
+					text="Overview", 
+					show=c(GetMatchingColumnsInOverview(Overview)),
+					hide=GetNotMatchingColumnsInOverview(Overview)
+				),
+				list(
+					extend= "colvisGroup",
+					text="Admissions",
+					show=c(GetMatchingColumnsInOverview(Admissions)), 
+					hide=GetNotMatchingColumnsInOverview(Admissions)
+				),
+				list(
+					extend= "colvisGroup",
+					text="Location",
+					show=c(GetMatchingColumnsInOverview(Location)), 
+					hide=GetNotMatchingColumnsInOverview(Location)
+				),
+				list(
+					extend= "colvisGroup",
+					text="Outcomes",
+					show=c(GetMatchingColumnsInOverview(Outcomes)), 
+					hide=GetNotMatchingColumnsInOverview(Outcomes)
+				),
+				list(
+					extend= "colvisGroup",
+					text="Resources",
+					show=c(GetMatchingColumnsInOverview(Resources)), 
+					hide=GetNotMatchingColumnsInOverview(Resources)
+				),
+				list(
+					extend= "colvisGroup",
+					text="Student life",
+					show=c(GetMatchingColumnsInOverview(Student_life)), 
+					hide=GetNotMatchingColumnsInOverview(Student_life)
+				),
+				list(
+					extend= "colvisGroup",
+					text="Freshmen demographics",
+					show=c(GetMatchingColumnsInOverview(Freshmen_demographics)), 
+					hide=GetNotMatchingColumnsInOverview(Freshmen_demographics)
+				),
+				list(
+					extend= "colvisGroup",
+					text="Safety",
+					show=c(GetMatchingColumnsInOverview(Safety)), 
+					hide=GetNotMatchingColumnsInOverview(Safety)
+				),
+				list(
+					extend= "colvisGroup",
+					text="Finances",
+					show=c(GetMatchingColumnsInOverview(Finances)), 
+					hide=GetNotMatchingColumnsInOverview(Finances)
+				),
+				list(
+					extend= "colvisGroup",
+					text="Revenue sources",
+					show=c(GetMatchingColumnsInOverview(Revenue_sources)), 
+					hide=GetNotMatchingColumnsInOverview(Revenue_sources)
+				)
+			),
+			language = list(searchPanes = list(collapse = "Filter Rows"))
+
+		)
+	) 
+	for (focal_row in sequence(nrow(index_conversions))) {
+		if(index_conversions$Type[focal_row]=="Percent") {
+			datatable_output <- DT::formatStyle(datatable_output, columns=index_conversions$Rename[focal_row], color=DT::styleInterval(seq(from=10, to=90, by=10), viridisLite::plasma(n=10, begin=0, end=.7)), target="cell") %>% DT::formatRound(columns=index_conversions$Rename[focal_row], digits=0)
+		}
+		if(index_conversions$Type[focal_row]=="Money") {
+			datatable_output <- DT::formatCurrency(datatable_output, columns=index_conversions$Rename[focal_row], digits=0)
+
+		}
+		if(index_conversions$Type[focal_row]=="Number") {
+			datatable_output <- DT::formatRound(datatable_output, columns=index_conversions$Rename[focal_row], digits=0)
+		}
+	}
+	datatable_output
+}
+```
