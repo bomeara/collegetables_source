@@ -1,6 +1,11 @@
 # docs dir
 docs/
 
+# raw data from ipeds
+data/IPEDS*
+data/ipeds*
+data/MERGED*
+
 # History files
 .Rhistory
 .Rapp.history
