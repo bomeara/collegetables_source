@@ -37,7 +37,15 @@ list(
  tar_target(life_expectancy, GetLifeExpectancy()),
  tar_target(life_expectancy_plots, CreateLifeExpectancyPlots(life_expectancy)),
  tar_target(fields_and_majors, GetFieldsAndMajors(comparison_table, ipeds_direct_and_db, CIPS_codes)),
- tar_target(pages_new, RenderInstitutionPagesNew(comparison_table, fields_and_majors, maxcount=maxcount, CIPS_codes=CIPS_codes, weatherspark=weatherspark, yml=yml, index_table=index_table, life_expectancy=life_expectancy, population_by_state_by_age=population_by_state_by_age)),
+ #tar_target(pages_new, RenderInstitutionPagesNew(comparison_table, fields_and_majors, maxcount=maxcount, CIPS_codes=CIPS_codes, weatherspark=weatherspark, yml=yml, index_table=index_table, life_expectancy=life_expectancy, population_by_state_by_age=population_by_state_by_age)),
+ tar_target(institution_unitid, unique(comparison_table$`UNITID Unique identification number of the institution`)),
+ tar_target(institution_rmd, command="_institution.Rmd", format="file"),
+ tar_target(
+	pages_new, 
+	RenderSingleInstitutionPage(institution_unitid, comparison_table, fields_and_majors, maxcount=maxcount, CIPS_codes=CIPS_codes, weatherspark=weatherspark, yml=yml, index_table=index_table, life_expectancy=life_expectancy, population_by_state_by_age=population_by_state_by_age, institution_rmd=institution_rmd),
+	pattern=map(institution_unitid)
+ ),
+
  tar_target(CIPS_codes, GetCIPCodesExplanations()),
  tar_target(yml, CreateYMLForSite(CIPS_codes)),
  tar_target(field_pages, RenderFieldPages(CIPS_codes, fields_and_majors, yml)),

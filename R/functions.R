@@ -1534,6 +1534,58 @@ RenderInstitutionPagesNew <- function(comparison_table, fields_and_majors, maxco
 }
 
 
+
+RenderSingleInstitutionPage <- function(institution_unitid, comparison_table, fields_and_majors, maxcount=40, CIPS_codes, weatherspark, yml, index_table, life_expectancy, population_by_state_by_age, institution_rmd) {
+	#institution_rmd just to track changes in that page
+	institution_ids <- unique(comparison_table$`UNITID Unique identification number of the institution`)
+	dead_institutions <- subset(comparison_table, comparison_table$`Status of institution`%in% c('Closed in current year (active has data)', 'Combined with other institution ', 'Delete out of business'))
+	institution_ids <- setdiff(institution_ids, dead_institutions$`UNITID Unique identification number of the institution`)
+	comparison_table <- subset(comparison_table, comparison_table$`UNITID Unique identification number of the institution` %in% institution_ids) # remove dead institutions so we don't compare with them
+	
+	# prioritize the "selective" schools to render first
+	
+	comparison_table$pseudoranking <- (100 - as.numeric.na0(comparison_table$`Admission percentage total`)) + as.numeric.na0(comparison_table$`Yield percentage total`) + as.numeric.na0(comparison_table$`Undergrad full time`) + as.numeric.na0(comparison_table$`Tenure-stream Grand total`)
+	comparison_table$pseudoranking[is.na(comparison_table$pseudoranking)] <- 0
+	comparison_table <- comparison_table[order(comparison_table$pseudoranking, decreasing=TRUE),]
+
+
+	try({
+		institution_id <- institution_unitid
+		institution_name <- rownames(t(t(sort(table(comparison_table$`Institution entity name`[comparison_table$`UNITID Unique identification number of the institution` == institution_id]), decreasing=TRUE))))[1] # sometimes the name changes a bit; take the most common one		
+		#cat("\r", paste0("Rendering ", institution_name, " (", i, " of ", length(institution_ids), ") with id ", institution_id))
+		
+		rmarkdown::render(
+			input="_institution.Rmd", 
+			output_file="docs/institution.html", 
+			params = list(
+				institution_name = institution_name,
+				institution_long_name = institution_name,
+				institution_id =  institution_id,
+				comparison_table = comparison_table,
+				weatherspark=weatherspark,
+				index_table=index_table,
+				life_expectancy=life_expectancy,
+				population_by_state_by_age=population_by_state_by_age
+			),
+			quiet=TRUE
+		)
+		#Sys.sleep(1)
+		system("sed -i '' 's/&gt;/>/g' docs/institution.html") # because htmlTable doesn't escape well; the '' is a requirement of OS X's version of sed, apparently
+		system("sed -i '' 's/&lt;/</g' docs/institution.html")
+		
+		#Sys.sleep(1)
+
+
+		file.copy("docs/institution.html", paste0("docs/", utils::URLencode(gsub(" ", "", institution_id)), ".html"), overwrite=TRUE)
+		print(paste0("docs/", utils::URLencode(gsub(" ", "", institution_id)), ".html"))
+		#Sys.sleep(1)
+		failed <- FALSE
+	}, silent=TRUE)
+
+	return(institution_unitid)
+}
+
+
 RenderMajorsPages <- function(fields_and_majors, CIPS_codes, yml, maxcount) {
 	db <- dbConnect(RSQLite::SQLite(), "data/db_IPEDS.sqlite")
 	field_data <- tbl(db, fields_and_majors[1]) %>% as.data.frame()

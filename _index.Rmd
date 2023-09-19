@@ -143,7 +143,6 @@ htmltools::tags$script("
 	Reactable.toggleHideColumn('college-list', 'Urbanization')
 	Reactable.toggleHideColumn('college-list', 'Miles to mountains')
 	Reactable.toggleHideColumn('college-list', 'Abortion availability')
-	Reactable.toggleHideColumn('college-list', 'California travel ban')
 	Reactable.toggleHideColumn('college-list', 'Gun law stringency')
 	Reactable.toggleHideColumn('college-list', 'State rep support for contraception')
 	Reactable.toggleHideColumn('college-list', 'State support for interracial and same-sex marriage')
@@ -304,8 +303,6 @@ leaflet(all_colleges) %>%
 crosstalk::filter_select("State", "State", all_colleges, ~State)
 
 crosstalk::filter_select("City", "City", all_colleges, ~City)
-
-crosstalk::filter_checkbox("CAban", "California travel ban", all_colleges, ~`California travel ban`)
 
 crosstalk::filter_checkbox("AbortionAvail", "Abortion availability", all_colleges, ~`Abortion availability`)
 

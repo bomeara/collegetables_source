@@ -175,7 +175,7 @@ try({
 }, silent=TRUE)
 ```
 
-```{r}
+```{r, eval=FALSE}
 try({
 	if(most_current_info['California Travel Ban'] == "TRUE") {
 		notes <- append(notes, "California considers the state this institution is in to have one or more anti-LGBTQ+ laws. It prohibits California-sponsored travel to this state as a safety measure. See more <a href='https://oag.ca.gov/ab1887'>here</a>.")
@@ -223,6 +223,21 @@ try({
 }, silent=TRUE)
 ```
 
+```{r}
+try({
+	if(round(as.numeric(most_current_info['Graduation Rate Bachelors in within 150 percent of normal time Grand total']),1)<80) {
+		notes <- append(notes, paste0("This institution's six year graduation rate is ", round(as.numeric(most_current_info['Graduation Rate Bachelors in within 150 percent of normal time Grand total']),1), "%, so approximately ",MASS::fractions(1-round(0.01*as.numeric(most_current_info['Graduation Rate Bachelors in within 150 percent of normal time Grand total']),1)), " of undergrads who enroll do not earn a degree from here."))
+	}
+}, silent=TRUE)
+```
+
+```{r}
+try({
+	if(round(as.numeric(most_current_info['Graduation Rate Bachelors in within 150 percent of normal time Grand total']),1)==100) {
+		notes <- append(notes, paste0("This institution's six year graduation rate is ", round(as.numeric(most_current_info['Graduation Rate Bachelors in within 150 percent of normal time Grand total']),1), "%, which is unusually high: seemingly every student who enters graduates."))
+	}
+}, silent=TRUE)
+```
 
 ```{r}
 try({
@@ -571,9 +586,10 @@ if(length(notes)>0) {
 * **Actual price for *your* family**: Go <a href='`r try({PrependHttpsIfNeeded(most_current_info['Net price calculator web address'])}, silent=TRUE)`'>here</a> to see what your family may be asked to pay. It can be MUCH lower than the average price but also higher for some.
 * **Size and setting**: `r try({most_current_info['Carnegie Classification 2021 Size and Setting']}, silent=TRUE)`
 * **In state percentage**: `r most_current_info['Percent first year students from in state']`% of first year students come from `r most_current_info['State']` `r ifelse(!is.na(as.numeric(most_current_info['Percent first year students residence not reported'])), ifelse(as.numeric(most_current_info['Percent first year students residence not reported'])>1, paste0("(note that ",most_current_info['Percent first year students residence not reported'], "% have no residence reported)" ),""),"")`
-* **In US percentage**: `r most_current_info['Percent first year students from US']`% of first year students come from the US `r ifelse(!is.na(most_current_info['Percent first year students residence not reported']), ifelse(most_current_info['Percent first year students residence not reported']>0, paste0("(note that ",most_current_info['Percent first year students residence not reported'], "% have no residence reported)" ),""),"")`
+* **In US percentage**: `r most_current_info['Percent first year students from US']`% of first year students come from the US `r ifelse(!is.na(most_current_info['Percent first year students residence not reported']), ifelse(most_current_info['Percent first year students residence not reported']>1, paste0("(note that ",most_current_info['Percent first year students residence not reported'], "% have no residence reported)" ),""),"")`
 `r ifelse(most_current_info['Tribal college']=="Yes", '* This is a **Tribal College**\n', "")`
 `r ifelse(most_current_info['Historically Black College or University']=="Yes", '* This is a **Historically Black College or University (HBCU)**\n', "")`
+`r ifelse(most_current_info['Religious affiliation']=="Not applicable", "", paste0("* This institution has a religious affiliation of **", most_current_info['Religious affiliation'], '**\n'))`
 `r ifelse(!is.na(most_current_info['Graduation Rate Bachelors in within 150 percent of normal time Grand total']), paste0('* **Graduation rate (within 6 years) for students seeking a Bachelors**: ', round(as.numeric(most_current_info['Graduation Rate Bachelors in within 150 percent of normal time Grand total']),1), '% (this is what is usually reported as "graduation rate")\n'), "")`
 `r ifelse(!is.na(most_current_info['Graduation Rate Bachelors in 4 years or less Grand total']), paste0('* **Graduation rate (within 4 years) for students seeking a Bachelors**: ', round(as.numeric(most_current_info['Graduation Rate Bachelors in 4 years or less Grand total']),1), '%\n'), "")`
 `r ifelse(!is.na(most_current_info['Graduation Rate Transfer out of bachelors Grand total']), paste0('* **Percent of students seeking a Bachelors who transfer out of this institution**: ', round(as.numeric(most_current_info['Graduation Rate Transfer out of bachelors Grand total']),1), '%\n'), "")`
@@ -584,7 +600,6 @@ if(length(notes)>0) {
 * **Institution provides on campus housing**: `r most_current_info['Institution provide on campus housing']`
 `r ifelse(is.finite(as.numeric(most_current_info['Total dormitory capacity'])), ifelse(as.numeric(most_current_info['Total dormitory capacity'])>0, paste0("* **Dorm capacity**: There are enough dorm beds for ", as.numeric(most_current_info['Total dormitory capacity']), " students"), ""), "")`
 * **Freshmen required to live on campus**: `r most_current_info['Full time first time degree certificate seeking students required to live on campus']`
-* **Meal plan**: `r most_current_info['Institution provides board or meal plan']`
 * **Covid vaccination requirement for students**: `r ifelse(most_current_info['AllStudentsVaccinatedAgainstCovid19']=="Yes", "At some point during the pandemic (this may have changed), this institution required students to be vaccinated against covid", "This institution was never reported as requiring covid vaccination for students")` (based on info from [here](https://www.chronicle.com/blogs/live-coronavirus-updates/heres-a-list-of-colleges-that-will-require-students-to-be-vaccinated-against-covid-19))
 * **Covid vaccination requirement for faculty/staff**: `r ifelse(most_current_info['AllEmployeesVaccinatedAgainstCovid19']=="Yes", "At some point during the pandemic (this may have changed), this institution required faculty and/or staff to be vaccinated against covid", "This institution was never reported as requiring covid vaccination for faculty and/or staff")` (based on info from [here](https://www.chronicle.com/blogs/live-coronavirus-updates/heres-a-list-of-colleges-that-will-require-students-to-be-vaccinated-against-covid-19))
 * **Advanced placement (AP) credits used**: `r most_current_info['Advanced placement AP credits']`
@@ -597,11 +612,17 @@ if(length(notes)>0) {
 * **Gun law stringency**: `r most_current_info['Gun Law Stringency']` (higher grade = [more stringent](https://worldpopulationreview.com/state-rankings/strictest-gun-laws-by-state))
 * **State rep support for contraception**: `r round(100*as.numeric(most_current_info['Proportion of reps voting in favor of respect for right to contraception act']),1)`% of US reps from this state [voted in favor](https://www.congress.gov/bill/117th-congress/house-bill/8373) of legal protections for contraception.
 * **State rep support for recognizing same-sex and interracial marriage**: `r round(100*as.numeric(most_current_info['Proportion of reps voting in favor of respect for marriage act']),1)`% of US reps from this state [voted in favor](https://www.congress.gov/bill/117th-congress/house-bill/8404) of requiring states to recognize same-sex and interracial marriages performed in other states
-* **Anti-trans legislative risk**: `r gsub("\\d: ", "", most_current_info['Trans Risk'])` (based on [Erin Reed's work](https://www.erininthemorning.com/p/june-anti-trans-legislative-risk), as of June 25, 2023)
+* **Anti-trans legislative risk for adults over the next two years**: `r gsub("\\d: ", "", most_current_info['Trans Risk'])` (based on [Erin Reed's work](https://www.erininthemorning.com/p/anti-trans-legislative-risk-assessment), as of September 6, 2023)
 * **Ecological region**: `r most_current_info['eco_name']`
 * **Biome**: `r most_current_info['biome']`
 * **Distance to mountains**: `r round(as.numeric(most_current_info['MilesToMountains']),1)` miles to `r most_current_info['ClosestMountainRange']`
 * **Climate**: See overview at [WeatherSpark](`r GetClosestWeatherspark(most_current_info, weatherspark)`)
+
+# Other links
+
+* **College Navigator**: [Link](https://nces.ed.gov/collegenavigator/?id=`r params$institution_id`) (from the US federal government, good for things like cost of attendance)
+* **College Scorecard**: [Link](https://collegescorecard.ed.gov/school/?`r params$institution_id`) (also from the US federal government, includes information like income per major)
+
 
 # Similar institutions
 
