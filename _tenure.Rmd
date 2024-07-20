@@ -5,6 +5,8 @@ output:
     self_contained: false
     includes:
       in_header: GA_Script.html
+params:
+    comparison_table: "nothing"
 ---
 
 ## Tenure
@@ -33,7 +35,8 @@ library(plotly)
 library(magrittr)
 library(htmlwidgets)
 
-tar_load(comparison_table)
+#tar_load(comparison_table)
+comparison_table <- params$comparison_table
 comparison_table$`IPEDS Year` <- as.numeric(comparison_table$`IPEDS Year`)
 comparison_table$`Total instructors` <- as.numeric(comparison_table$`Total instructors`)
 comparison_table$`Tenure-stream percent` <- 100*as.numeric(comparison_table$`Tenure-stream Grand total`)/as.numeric(comparison_table$`Total instructors`)

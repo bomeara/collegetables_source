@@ -1,0 +1,52 @@
+﻿State abbreviation,AntiTrans
+FL,6: Do not travel
+AL,5: Worst
+ID,5: Worst
+KS,5: Worst
+LA,5: Worst
+MS,5: Worst
+MT,5: Worst
+ND,5: Worst
+OK,5: Worst
+TN,5: Worst
+UT,5: Worst
+AR,4: High risk
+IA,4: High risk
+IN,4: High risk
+MO,4: High risk
+NE,4: High risk
+NH,4: High risk
+OH,4: High risk
+SC,4: High risk
+TX,4: High risk
+WV,4: High risk
+AK,3: Moderate risk
+GA,3: Moderate risk
+KY,3: Moderate risk
+NC,3: Moderate risk
+SD,3: Moderate risk
+WY,3: Moderate risk
+AZ,2: Low risk
+DE,2: Low risk
+MI,2: Low risk
+NV,2: Low risk
+PA,2: Low risk
+VA,2: Low risk
+WI,2: Low risk
+CA,1: Safest
+CO,1: Safest
+CT,1: Safest
+DC,1: Safest
+HI,1: Safest
+IL,1: Safest
+MA,1: Safest
+MD,1: Safest
+ME,1: Safest
+MN,1: Safest
+NJ,1: Safest
+NM,1: Safest
+NY,1: Safest
+OR,1: Safest
+RI,1: Safest
+VT,1: Safest
+WA,1: Safest

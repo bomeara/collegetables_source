@@ -8,6 +8,7 @@ params:
   field_name: "nothing"
   cips_headers: "nothing"
   cips_content: "nothing"
+  fields_and_majors: "nothing"
 title: "`r paste0(params$field_name)`"
 
 ---
@@ -16,7 +17,8 @@ title: "`r paste0(params$field_name)`"
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE}
 source("_packages.R")
 source("R/functions.R")
-tar_load(fields_and_majors)
+#tar_load(fields_and_majors)
+fields_and_majors <- params$fields_and_majors
 db <- dbConnect(RSQLite::SQLite(), "data/db_IPEDS.sqlite")
 field_data <- tbl(db, fields_and_majors[1]) %>% as.data.frame()
 

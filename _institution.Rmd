@@ -15,6 +15,7 @@ params:
   index_table: "index_table"
   life_expectancy: "nothing"
   population_by_state_by_age: "nothing"
+  college_chosen_comparison_table: "nothing"
 title: "`r paste0(params$institution_name)`"
 
 ---
@@ -46,6 +47,7 @@ most_current_info <- NULL
 
 try({
 	
+	scoring_table <- data.frame()
 	index_focal_vector <- subset(index_table, index_table$UNITID==params$institution_id)
 	
 	index_table$pseudoranking_difference <- abs(as.numeric(index_table$`pseudoranking`)-as.numeric(index_focal_vector$`pseudoranking`))
@@ -124,7 +126,7 @@ try({
 
 	harvard_price <- FirstNaOmit(subset(comparison_table, comparison_table$`UNITID Unique identification number of the institution`=="166027")$`Average net price students awarded grant or scholarship aid`)
 	RatioToHarvard <- as.numeric(most_current_info['Average net price students awarded grant or scholarship aid'])/as.numeric(harvard_price)
-	harvard_30K_diff <- as.numeric(most_current_info['Average net price for 30K to 48K family income']) - 1396
+	#harvard_30K_diff <- as.numeric(most_current_info['Average net price for 30K to 48K family income']) - 1396
 	
 
 }, silent=TRUE)
@@ -145,7 +147,7 @@ try({
 }, silent=TRUE)
 ```
 
-```{r}
+```{r, eval=FALSE}
 try({
 	if(index_focal_vector['Revenues trend']=="Decreasing") {
 		notes <- append(notes, "This institution's revenues have tended to decrease over time.")
@@ -165,7 +167,7 @@ try({
 }, silent=TRUE)
 ```
 
-```{r}
+```{r, eval=FALSE}
 try({
 	if(index_focal_vector['Assets trend']=="Decreasing") {
 		notes <- append(notes, "This institution's total assets have tended to decrease over time.")
@@ -183,7 +185,7 @@ try({
 }, silent=TRUE)
 ```
 
-```{r}
+```{r, eval=FALSE}
 try({
 	if(most_current_info['State'] == "Texas") {
 		notes <- append(notes, "The state attorney general has <a href='https://www.washingtonpost.com/nation/2022/12/14/texas-transgender-data-paxton/'>sought to identify transgender individuals from state drivers license data</a>. Family and protective services have been ordered to <a href='https://www.washingtonpost.com/nation/2022/02/23/greg-abbott-gender-affirming-care-child-abuse-directive/'>investigate all parents of transgender children for abuse, as well</a>.")
@@ -191,7 +193,7 @@ try({
 }, silent=TRUE)
 ```
 
-```{r}
+```{r, eval=FALSE}
 try({
 	if(most_current_info['State'] == "Missouri") {
 		notes <- append(notes, "The state attorney general has put in an emergency rule that <a href='https://www.npr.org/2023/04/24/1171293057/missouri-attorney-general-transgender-adults-gender-affirming-health-care'>places barriers on gender-affirming care for children and adults</a>. As of May 13, 2023, <a href='https://apnews.com/article/missouri-transgender-health-care-ruling-705afa8c4e8a6d4445629c3f2694053f'>that rule has been temporarily blocked by a judge</a>, but the final outcome is still uncertain.")
@@ -215,7 +217,7 @@ try({
 }, silent=TRUE)
 ```
 
-```{r}
+```{r, eval=FALSE}
 try({
 	if(most_current_info['State'] == "Texas" & grepl("public", most_current_info['Sector of institution'], ignore.case=TRUE)) {
 		notes <- append(notes, "By <a href='https://www.dallasnews.com/news/education/2023/06/14/gov-abbott-signs-dei-bill-into-law-dismantling-diversity-offices-at-colleges/'>state law</a>, this public institution by January 2024 may not have a diversity, equity, and inclusion (DEI) office or mandatory DEI statements or training.")
@@ -226,7 +228,7 @@ try({
 ```{r}
 try({
 	if(round(as.numeric(most_current_info['Graduation Rate Bachelors in within 150 percent of normal time Grand total']),1)<80) {
-		notes <- append(notes, paste0("This institution's six year graduation rate is ", round(as.numeric(most_current_info['Graduation Rate Bachelors in within 150 percent of normal time Grand total']),1), "%, so approximately ",MASS::fractions(1-round(0.01*as.numeric(most_current_info['Graduation Rate Bachelors in within 150 percent of normal time Grand total']),1)), " of undergrads who enroll do not earn a degree from here."))
+		notes <- append(notes, paste0("This institution's six year bachelors graduation rate is ", round(as.numeric(most_current_info['Graduation Rate Bachelors in within 150 percent of normal time Grand total']),1), "%, so approximately ",MASS::fractions(1-round(0.01*as.numeric(most_current_info['Graduation Rate Bachelors in within 150 percent of normal time Grand total']),1)), " of undergrads who enroll do not earn a bachelors degree from here."))
 	}
 }, silent=TRUE)
 ```
@@ -275,7 +277,7 @@ try({
 }, silent=TRUE)
 ```
 
-```{r}
+```{r, eval=FALSE}
 try({
 	if(as.numeric(most_current_info['Revenue minus expenses'])<0) {
 		notes <- append(notes, paste0("In the most recent year available, this institution ran a deficit of $", formatMe(abs(as.numeric(most_current_info['Revenue minus expenses'])))))
@@ -336,6 +338,7 @@ colnames(comparison_df) <- c(params$institution_name, "Change", "Trend", focal_c
 rownames(comparison_df) <- comparison_conversions$Rename
 max_year_overall <- 0
 min_year_overall <- Inf
+rows_to_delete <- c()
 for(row_index in sequence(nrow(comparison_conversions))) {
 	try({
 		focal_field <- comparison_conversions$ColumnName[row_index]
@@ -365,7 +368,12 @@ for(row_index in sequence(nrow(comparison_conversions))) {
 				
 			plotting_data <- table_to_plot_focal_only
 			colnames(plotting_data)[which(colnames(plotting_data)==focal_field)] <- "Number"
+		
 			plotting_data <- subset(plotting_data, !is.na(plotting_data$Number))
+			if(comparison_df$Heading[row_index] == "Graduation") { # get rid of the missing data as zeros for graduation rates
+				plotting_data <-subset(plotting_data, Number!=0)	
+			}
+			
 			plotting_data$NumberText <- paste0(sapply(plotting_data$Number, formatMe, digits=0))
 			oldest <- plotting_data %>% slice(which.max(Year))
 			youngest <- plotting_data %>% slice(which.min(Year))
@@ -395,7 +403,7 @@ for(row_index in sequence(nrow(comparison_conversions))) {
 			theme(axis.text.x = element_text(colour = "darkgray")) 
 		}))
 		
-		filename_png <- paste0("images/", utils::URLencode(gsub(" ", "", params$institution_name)), "_", row_index, ".png")
+		filename_png <- paste0("images/", utils::URLencode(gsub(" ", "", params$institution_id)), "_", row_index, ".png")
 
 		suppressWarnings(suppressMessages({
 			ggsave(
@@ -411,7 +419,7 @@ for(row_index in sequence(nrow(comparison_conversions))) {
 		#comparison_df$Change[row_index] <- paste0("<img src=", filename_png, " width=", spark_width, " height=", spark_height, ">")
 		comparison_df$Change[row_index] <- paste0("<img src=", filename_png, " alt='Line plot from ", youngest$NumberText, " to ", oldest$NumberText, " from ", youngest$Year, " to ", oldest$Year, "' >")
 
-		most_recent_value <- head(table_to_plot_focal_only[focal_field],1)
+		most_recent_value <- as.numeric(head(table_to_plot_focal_only[focal_field],1))
 		original_most_recent_value <- most_recent_value
 		if(comparison_conversions$Units[row_index]=="Dollars") {
 			most_recent_value <- formatMe(most_recent_value, prefix="$")
@@ -431,6 +439,9 @@ for(row_index in sequence(nrow(comparison_conversions))) {
 
 		most_recent_value <- paste0(most_recent_value, " (", max_year, ")")
 		comparison_df[row_index,1] <- most_recent_value
+		if(grepl("Unknown", most_recent_value)) {
+			rows_to_delete <- append(rows_to_delete, row_index)
+		}
 			
 		linear_fit_data <- table_to_plot_focal_only
 		colnames(linear_fit_data)[which(colnames(linear_fit_data)==focal_field)] <- "Dependent"
@@ -459,6 +470,9 @@ for(row_index in sequence(nrow(comparison_conversions))) {
 		#star_symbol <- '⭐'
 		star_symbol <- '✪'
 		if(comparison_conversions$Better[row_index]!="None") {
+			scoring_table_local <- data.frame(matrix(NA, nrow=1, ncol=length(comparison_vector)+1))
+			colnames(scoring_table_local) <- c("Category", focal_conference_name, focal_classification_name)
+			scoring_table_local[1,1] <- comparison_conversions$ColumnName[row_index]
 			for (grouping_index in sequence(length(comparison_vector))) {
 				table_to_plot_comparison_only <- subset(table_to_plot, table_to_plot$Comparison==comparison_vector[grouping_index])
 				comparison_values <- table_to_plot_comparison_only[which(table_to_plot_comparison_only$Year==max_year), focal_field]
@@ -468,10 +482,15 @@ for(row_index in sequence(nrow(comparison_conversions))) {
 				}
 				star_string <- paste0(rep(star_symbol, max(1, ceiling(10*quantile_score/2))), collapse="") # there's always at least one star
 				comparison_df[row_index, grouping_index+3] <- paste0(star_string, "<br />Better (", tolower(comparison_conversions$Better[row_index]), ") than ", round(100*quantile_score), '%')
+				scoring_table_local[1, grouping_index+1] <- quantile_score
 			}
+			try({scoring_table <- rbind(scoring_table, scoring_table_local)}, silent=TRUE)
 		}
 		
 	}, silent=TRUE)
+}
+if(length(rows_to_delete)>0) {
+	comparison_df <- comparison_df[-rows_to_delete,]
 }
 
 colnames(comparison_df) <- gsub("Change", paste0("Change over ≤\n", max_year_overall-min_year_overall, " years"), colnames(comparison_df))
@@ -530,7 +549,7 @@ try({
 					scale_y_continuous(breaks=c(0,biggest$Percentage), position="left", labels=c(smallest$PercentageText, biggest$PercentageText), sec.axis = sec_axis(~ ., breaks = oldest$Percentage, labels="")) +
 				theme(axis.text.y = element_text(colour = "black"))
 				
-				filename_png <- paste0("images/", utils::URLencode(gsub(" ", "", params$institution_name)), "_faculty_", category_index, "_", rank_index, ".png")
+				filename_png <- paste0("images/", utils::URLencode(gsub(" ", "", params$institution_id)), "_faculty_", category_index, "_", rank_index, ".png")
 				
 				suppressWarnings(suppressMessages({
 					ggsave(
@@ -566,6 +585,7 @@ try({
 }, silent=TRUE)
 ```
 
+
 ```{r, results='asis'}
 if(length(notes)>0) {
 	cat("# Notes\nThese are items that bear looking into more closely.\n\n")
@@ -575,26 +595,29 @@ if(length(notes)>0) {
 }
 ```
 
+
+
+
+
 # Overview of institution
 
 * **Institution kind**: `r try({most_current_info['Carnegie Classification 2021 Basic']}, silent=TRUE)`
 * **Undergrad program**: `r try({most_current_info['Carnegie Classification 2021 Undergraduate Instructional Program']}, silent=TRUE)`
 * **Graduate program**: `r try({most_current_info['Carnegie Classification 2021 Graduate Instructional Program']}, silent=TRUE)`
 * **Enrollment profile**: `r try({most_current_info['Carnegie Classification 2021 Enrollment Profile']}, silent=TRUE)` (see more details below)
-* **Average net price for undergrads on financial aid**: $`r formatMe(as.numeric(most_current_info['Average net price students awarded grant or scholarship aid']))` (`r ifelse(RatioToHarvard>1, paste0(round(RatioToHarvard,1), " times the equivalent cost of Harvard)"), paste0("This is ", 100*round(RatioToHarvard,1), "% the average cost of Harvard)"))`. 
-* **Average net price for families with $30K-48K income**: $`r formatMe(as.numeric(most_current_info['Average net price for 30K to 48K family income']))` (This is $`r formatMe(abs(harvard_30K_diff))` `r (ifelse(harvard_30K_diff<0, "cheaper than", ifelse(harvard_30K_diff>0, "more expensive than", "equal to")))` what Harvard costs for equivalent students). `r ifelse(!is.na(as.numeric(most_current_info['Average net price for 30K to 48K family income'])), ifelse(as.numeric(most_current_info['Average net price for 30K to 48K family income'])<0, " (The negative number means students in this income bracket receive this much OVER the expected total cost)",""),"")`
+* **Average net price for undergrads on financial aid**: `r formatMe(as.numeric(most_current_info['Average net price students awarded grant or scholarship aid']), prefix='$')` `r ifelse(is.na(RatioToHarvard), "", ifelse(RatioToHarvard>1, paste0('(',round(RatioToHarvard,1), " times the equivalent cost of Harvard)"), paste0("This is ", 100*round(RatioToHarvard,1), "% the average cost of Harvard)")))`. 
 * **Actual price for *your* family**: Go <a href='`r try({PrependHttpsIfNeeded(most_current_info['Net price calculator web address'])}, silent=TRUE)`'>here</a> to see what your family may be asked to pay. It can be MUCH lower than the average price but also higher for some.
 * **Size and setting**: `r try({most_current_info['Carnegie Classification 2021 Size and Setting']}, silent=TRUE)`
-* **In state percentage**: `r most_current_info['Percent first year students from in state']`% of first year students come from `r most_current_info['State']` `r ifelse(!is.na(as.numeric(most_current_info['Percent first year students residence not reported'])), ifelse(as.numeric(most_current_info['Percent first year students residence not reported'])>1, paste0("(note that ",most_current_info['Percent first year students residence not reported'], "% have no residence reported)" ),""),"")`
-* **In US percentage**: `r most_current_info['Percent first year students from US']`% of first year students come from the US `r ifelse(!is.na(most_current_info['Percent first year students residence not reported']), ifelse(most_current_info['Percent first year students residence not reported']>1, paste0("(note that ",most_current_info['Percent first year students residence not reported'], "% have no residence reported)" ),""),"")`
+* **In state percentage**: `r formatMe(as.numeric(most_current_info['Percent first year students from in state']), unitsuffix='%')` of first year students come from `r most_current_info['State']` `r ifelse(!is.na(as.numeric(most_current_info['Percent first year students residence not reported'])), ifelse(as.numeric(most_current_info['Percent first year students residence not reported'])>1, paste0("(note that ",most_current_info['Percent first year students residence not reported'], "% have no residence reported)" ),""),"")`
+* **In US percentage**: `r formatMe(as.numeric(most_current_info['Percent first year students from US']), unitsuffix='%')` of first year students come from the US `r ifelse(!is.na(most_current_info['Percent first year students residence not reported']), ifelse(most_current_info['Percent first year students residence not reported']>1, paste0("(note that ",most_current_info['Percent first year students residence not reported'], "% have no residence reported)" ),""),"")`
 `r ifelse(most_current_info['Tribal college']=="Yes", '* This is a **Tribal College**\n', "")`
 `r ifelse(most_current_info['Historically Black College or University']=="Yes", '* This is a **Historically Black College or University (HBCU)**\n', "")`
 `r ifelse(most_current_info['Religious affiliation']=="Not applicable", "", paste0("* This institution has a religious affiliation of **", most_current_info['Religious affiliation'], '**\n'))`
 `r ifelse(!is.na(most_current_info['Graduation Rate Bachelors in within 150 percent of normal time Grand total']), paste0('* **Graduation rate (within 6 years) for students seeking a Bachelors**: ', round(as.numeric(most_current_info['Graduation Rate Bachelors in within 150 percent of normal time Grand total']),1), '% (this is what is usually reported as "graduation rate")\n'), "")`
 `r ifelse(!is.na(most_current_info['Graduation Rate Bachelors in 4 years or less Grand total']), paste0('* **Graduation rate (within 4 years) for students seeking a Bachelors**: ', round(as.numeric(most_current_info['Graduation Rate Bachelors in 4 years or less Grand total']),1), '%\n'), "")`
 `r ifelse(!is.na(most_current_info['Graduation Rate Transfer out of bachelors Grand total']), paste0('* **Percent of students seeking a Bachelors who transfer out of this institution**: ', round(as.numeric(most_current_info['Graduation Rate Transfer out of bachelors Grand total']),1), '%\n'), "")`
-* **Student to tenure-stream faculty ratio**: `r round(as.numeric(most_current_info['Full time undergrad enrollment divided by tenure stream faculty']),1)` (undergrads to tenure-stream faculty) [[Tenure explained](tenure.html)]
-* **Student to faculty ratio**: `r round(as.numeric(most_current_info['Full time undergrad enrollment divided by total instructors']),1)` (undergrads to all faculty)
+* **Student to tenure-stream faculty ratio**: `r formatMe(round(as.numeric(most_current_info['Full time undergrad enrollment divided by tenure stream faculty']),1), digits=1)` (undergrads to tenure-stream faculty) [[Tenure explained](tenure.html)]
+* **Student to faculty ratio**: `r formatMe(round(as.numeric(most_current_info['Full time undergrad enrollment divided by total instructors']),1), digits=1)` (undergrads to all faculty)
 * **Degrees offered**: `r most_current_info['Degrees offered']`
 * **Schedule**: `r most_current_info['Calendar system']`
 * **Institution provides on campus housing**: `r most_current_info['Institution provide on campus housing']`
@@ -606,13 +629,115 @@ if(length(notes)>0) {
 
 `r ifelse(most_current_info['Percent indicator of undergraduates formally registered as students with disabilities']=="More than 3 percent", paste0("* **Disabilities**: ", most_current_info['Percent of undergraduates who are formally registered as students with disabilities when percentage is more than 3 percent'], " percent of undergrads are registered as having disabilities.\n"), paste0("* **Disabilities**: ", most_current_info['Percent indicator of undergraduates formally registered as students with disabilities'], " of undergrads are registered as having disabilities.\n"))`
 
+
+```{r, eval=FALSE, results='asis', message=FALSE, warning=FALSE}
+
+# Tried doing radar plot, then dotchart -- neither is working, so turning off.
+
+radar_filename_base <- paste0("docs/images/radar_", params$institution_id)
+
+
+important_factors <- c(
+	"Graduation Rate Bachelors in within 150 percent of normal time Grand total", 
+	"Average net price students awarded grant or scholarship aid",
+	"Full time undergrad enrollment divided by tenure stream faculty",
+	"Physical library circulations per students and faculty",
+	"Percent of revenue from tuition and fees",
+	"Yield percentage total"
+)
+names(important_factors) <- c(
+	"Graduation rate",
+	"Affordability",
+	"Tenure track faculty",
+	"Library usage",
+	"Not dependent on tuition",
+	"Student yield"
+)
+# radar_data <- data.frame(matrix(0, nrow=3, ncol=length(important_factors)))
+# radar_data[1,] <- 1
+# colnames(radar_data) <- names(important_factors)
+# radar_file_name <- paste0("images/radar_", params$institution_id , ".png")
+
+
+```
+
+
+
+```{r, eval=FALSE, results='asis', message=FALSE, warning=FALSE, fig.width=8, fig.height=4}
+	#png(filename=radar_file_name, width=900, height=450)
+	#plot(cars)
+	#dev.off()
+
+dotchart_data <- data.frame()
+figure_string <- ""
+
+if(nrow(scoring_table)>=length(important_factors)) {	
+
+	for(comparison_focal_index in sequence(2)) {
+		dotchart_data_local <- data.frame(matrix(NA, nrow=length(important_factors), ncol=3))
+		colnames(dotchart_data_local) <- c("Quantile", "Measure", "Group")
+		dotchart_data_local$Measure <- important_factors
+		dotchart_data_local$Group <- colnames(scoring_table)[1+comparison_focal_index]
+		
+
+		for (focal_factor_index in sequence(length(important_factors))) {
+			focal_factor_original_name <- important_factors[focal_factor_index]
+			focal_factor_col_name <- names(important_factors)[focal_factor_index]
+			try({dotchart_data_local[focal_factor_index,1] <- scoring_table[which(scoring_table$Category==focal_factor_original_name), comparison_focal_index+1][1]})
+		}
+		dotchart_data <- rbind(dotchart_data, dotchart_data_local)
+		
+		
+		#try({fmsb::radarchart( radar_data, centerzero=TRUE, pcol=rgb(0.2,0.5,0.5,0.9) , pfcol=rgb(0.2,0.5,0.5,0.5), title=paste0(params$institution_name, " vs \n", colnames(scoring_table)[1+comparison_focal_index]), cex.main=0.7, axislabcol="grey", cglcol="grey", cglty=1, vlcex=0.5)})
+
+
+	}
+	try({
+	# dotchart save
+	g <- ggdotchart(
+  	dotchart_data, x = "Measure", y = "Quantile", 
+  	group = "Group", color = "Group", palette = "jco",
+  	add = "segment", position = position_dodge(0.3), rotate=TRUE) + ylim(0,1) 
+  
+	}, silent=TRUE)
+	
+	#knitr::kable(dotchart_data)
+	#write.csv(dotchart_data, file="~/Downloads/dotchart_data.csv")
+	#print(g)
+	dotchart_address <- paste0("images/dotchart_", params$institution_id , ".png")
+	
+	
+	 figure_string <- paste0('<img src=', dotchart_address, ' alt="Dot chart showing quantiles here versus elsewhere">')
+
+
+}
+
+```
+
+```{r, eval=FALSE, results='asis', message=FALSE, warning=FALSE, fig.width=8, fig.height=4}
+if(nchar(figure_string)>0) {
+suppressWarnings(suppressMessages({
+	ggsave(
+		plot = g,
+		filename = paste0('docs/', dotchart_address),
+		bg = "transparent",
+		width = 800,
+		height= 800,
+		units = "px"
+	)
+	}))
+}
+```
+
+
+
 # Overview of location
 
 * **Abortion in this state**: `r gsub("\\d: ", "", most_current_info['Abortion'])` (based on https://states.guttmacher.org/policies/ as of May 10, 2023)
 * **Gun law stringency**: `r most_current_info['Gun Law Stringency']` (higher grade = [more stringent](https://worldpopulationreview.com/state-rankings/strictest-gun-laws-by-state))
 * **State rep support for contraception**: `r round(100*as.numeric(most_current_info['Proportion of reps voting in favor of respect for right to contraception act']),1)`% of US reps from this state [voted in favor](https://www.congress.gov/bill/117th-congress/house-bill/8373) of legal protections for contraception.
 * **State rep support for recognizing same-sex and interracial marriage**: `r round(100*as.numeric(most_current_info['Proportion of reps voting in favor of respect for marriage act']),1)`% of US reps from this state [voted in favor](https://www.congress.gov/bill/117th-congress/house-bill/8404) of requiring states to recognize same-sex and interracial marriages performed in other states
-* **Anti-trans legislative risk for adults over the next two years**: `r gsub("\\d: ", "", most_current_info['Trans Risk'])` (based on [Erin Reed's work](https://www.erininthemorning.com/p/anti-trans-legislative-risk-assessment), as of September 6, 2023)
+* **Anti-trans legislative risk for adults over the next two years**: `r gsub("\\d: ", "", most_current_info['Trans Risk'])` (based on [Erin Reed's work](https://www.erininthemorning.com/p/anti-trans-legislative-risk-assessment-3dc), as of July 11, 2024)
 * **Ecological region**: `r most_current_info['eco_name']`
 * **Biome**: `r most_current_info['biome']`
 * **Distance to mountains**: `r round(as.numeric(most_current_info['MilesToMountains']),1)` miles to `r most_current_info['ClosestMountainRange']`
@@ -623,6 +748,15 @@ if(length(notes)>0) {
 * **College Navigator**: [Link](https://nces.ed.gov/collegenavigator/?id=`r params$institution_id`) (from the US federal government, good for things like cost of attendance)
 * **College Scorecard**: [Link](https://collegescorecard.ed.gov/school/?`r params$institution_id`) (also from the US federal government, includes information like income per major)
 
+```{r, eval=FALSE}
+
+`r ifelse(nrow(scoring_table)>=length(important_factors), "# Visual comparison","")`
+
+
+`r ifelse(nrow(scoring_table)>=length(important_factors), "The radar chart below shows how this institution compares to other institutions on a number of factors. The further from the center, the better (distance from center is the quantile: all the way at the edge means this institution is the best in the comparison set, halfway means it's at the 50th percentile, etc.). A missing dot reflects lack of information on that metric. Graduation rate based on the six-year graduation rate for a bachelors degree. Student yield is the yield rate, the percentage of undergrads offered admission who choose to go: most students choosing to go indicates a college is attractive. Not dependent on tuition is based on how much of a college's revenue comes from tuition: especially for small schools, a school heavily dependent on tuition (rather than endowment or government funding) can have issues if enrollment declines. Library usage is based on number of physical library items checked out per faculty and student: many resources are now digital, but how those could be counted could vary more than counts of physical items. Tenure track faculty is based on the number of tenure track faculty per undergraduate students; institutions that do not offer the academic protections of tenure score poorly on this metric ([tenure explained](tenure.html)). Affordability is based on the average net price for students receiving federal financial aid, but there can be wide differences in affordability for different levels of income.", "")`
+
+`r ifelse(nrow(scoring_table)>=length(important_factors), paste0("![Radar chart](", radar_file_name, ")"), "")`
+```
 
 # Similar institutions
 
@@ -630,14 +764,30 @@ This is using information about school size, acceptance rate, yield rate, gradua
 
 ```{r, eval=TRUE}
 
-similar_table <- index_table[1:100,] %>% dplyr::select(`Institution`, `Admission percentage total`, `Yield percentage total`,  `Grad rate in six years`, `Percent of revenue from tuition and fees`, `Student to tenure track faculty ratio`,  `Average net price for 30K to 48K family income`, `Undergrad full time`, `Grad full time`, `State`,  `Full-time undergrad enrollment trend`, `UNITID`)
+similar_table <- index_table[1:100,] %>% dplyr::select(`Institution`, `Admission percentage total`, `Yield percentage total`,  `Grad rate in six years`, `Average net price for students with financial aid`, `Percent of revenue from tuition and fees`, `Student to tenure track faculty ratio`, `Undergrad full time`, `Grad full time`, `State`,  `Full-time undergrad enrollment trend`, `UNITID`)
 
-rownames(similar_table) <- NULL
-		
-similar_table$Institution <- paste0('<a href="', paste0(similar_table$UNITID ,".html"), '">', similar_table$Institution, "</a>")
-similar_table <- similar_table[,-ncol(similar_table)]
+if(params$institution_id %in% similar_table$`UNITID`) {
 
-DT::datatable(similar_table, rownames=FALSE)
+	rownames(similar_table) <- NULL
+			
+	similar_table$Institution <- paste0('<a href="', paste0(similar_table$UNITID ,".html"), '">', similar_table$Institution, "</a>")
+	similar_table <- similar_table[,-ncol(similar_table)]
+	
+	good_columns <- c()
+	
+	for (col_index in sequence(ncol(similar_table))) {
+		if(!is.na(similar_table[1,col_index])) {
+			if(nchar(as.character(similar_table[1,col_index]))>0) {
+				good_columns <- append(good_columns, col_index)
+			}	
+		}	
+	}
+	
+	similar_table <- similar_table[,good_columns]
+
+	DT::datatable(similar_table, rownames=FALSE)
+
+}
 
 	
 ```
@@ -745,17 +895,7 @@ At many universities, almost no students pay the listed tuition and fees ("stick
 
 ```
 
-# Institution finances
 
-```{r, eval=TRUE}
-	try({
-		pretty_table <- comparison_df[which(comparison_df$Heading == "Institution finances"),-ncol(comparison_df)]
-		pretty_table <- pretty_table[,which((apply(pretty_table, 2, as.character) %>% apply(2, nchar) %>% apply(2, max, na.rm=TRUE))>0)]
-
-		pretty_table %>% knitr::kable(align="c") %>% kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
-	}, silent=TRUE)
-
-```
 
 # Graduation rates
 
@@ -764,6 +904,21 @@ Graduation rates for bachelor's degrees within 150% of normal time (6 years for 
 ```{r, eval=TRUE}
 	try({
 		pretty_table <- comparison_df[which(comparison_df$Heading == "Graduation"),-ncol(comparison_df)]
+		pretty_table <- pretty_table[,which((apply(pretty_table, 2, as.character) %>% apply(2, nchar) %>% apply(2, max, na.rm=TRUE))>0)]
+
+		pretty_table %>% knitr::kable(align="c") %>% kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+	}, silent=TRUE)
+```
+
+# Diversity
+
+The US Census Bureau has a [diversity index](https://www.census.gov/library/visualizations/interactive/racial-and-ethnic-diversity-in-the-united-states-2010-and-2020-census.html) that goes from 0 to 1. In their words, "A 0-value indicates that everyone in the population has the same racial and ethnic characteristics. A value close to 1 indicates that everyone in the population has different racial and ethnic characteristics." This uses their formula, but with the resolution available for the federal IPEDS data (which does not separate for a given demographic group whether members identify as Hispanic or not). This metric is about heterogeneity within the population, not the proportion of the population that comes from historically excluded groups.
+
+Following the practice of the census, the index is multiplied by 100 to give the percentage probability a random pair of individuals will have a different background. Most institutions argue that diversity is a benefit, so by default a higher number is listed as better, but there may be cases where this measure does not reflect the mission of a college (for example, 70% of the students at a [tribal college or university](https://www.aihec.org/tribal-colleges-universities/) may be American Indian: that could be low-scoring by this metric but should not be read as "bad" given the institution's mission).
+
+```{r, eval=TRUE}
+	try({
+		pretty_table <- comparison_df[which(comparison_df$Heading == "Diversity"),-ncol(comparison_df)]
 		pretty_table <- pretty_table[,which((apply(pretty_table, 2, as.character) %>% apply(2, nchar) %>% apply(2, max, na.rm=TRUE))>0)]
 
 		pretty_table %>% knitr::kable(align="c") %>% kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
@@ -914,7 +1069,7 @@ final_population_percent <- round(100*subset(age_alone_df, Year==18)$Population/
 number_by_age_df$PopulationPercentage <- 100*number_by_age_df$Population / current_population 
 p <- ggplot(number_by_age_df, aes(x=Year, y=PopulationPercentage, fill=State)) + geom_area() + guides(fill='none') + labs(x="Years in the future", y="Percentage of current college US population", title=paste0("US enrollment if trends continue is ", final_population_percent, "% of current US enrollment")) + theme(legend.position="none") + geom_text(data=number_by_age_df[number_by_age_df$Age==9,], aes(x=Year, y=PopulationPercentage, label=State), size=3, position = position_stack(vjust = 0.5),check_overlap = TRUE, color="white") 
 
-cliff_filename_png <- paste0("images/", utils::URLencode(gsub(" ", "", params$institution_name)), "_demographic_cliff", ".png")
+cliff_filename_png <- paste0("images/", utils::URLencode(gsub(" ", "", params$institution_id)), "_demographic_cliff", ".png")
 
 suppressWarnings(suppressMessages({
 	ggsave(

@@ -1,17 +1,19 @@
 ---
+title: "Fields of study"
 output:
   rmdformats::readthedown:
     self_contained: false
     includes:
       in_header: GA_Script.html
-title: "Fields of study"
-
+params:
+    CIPS_codes: "nothing"
 ---
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE}
 source("_packages.R")
 source("R/functions.R")
-tar_load(CIPS_codes)
+#tar_load(CIPS_codes)
+CIPS_codes <- params$CIPS_codes
 CIP_headers <- CIPS_codes[!duplicated(CIPS_codes$CIPFamily),]
 CIP_content <- CIPS_codes[duplicated(CIPS_codes$CIPFamily),]
 ```

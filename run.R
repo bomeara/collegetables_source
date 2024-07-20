@@ -16,8 +16,11 @@ tar_option_set(memory = "transient", garbage_collection = TRUE)
 tar_make(callr_function = NULL)
 #tar_make()
 
-system("cp -r docs/* ../collegetables_site")
+#system("cp -r docs/* ../collegetables_site")
 #system("cp *html docs")
-system("cp *html ../collegetables_site")
+#system("cp *html ../collegetables_site")
 #system("cp CNAME docs/CNAME")
-system("cp CNAME ../collegetables_site/CNAME")
+
+
+#system('rsync -avz --delete --exclude=".*" docs/ ../collegetables_site/')
+#system("cp CNAME ../collegetables_site/CNAME")

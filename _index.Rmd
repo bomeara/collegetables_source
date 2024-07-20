@@ -14,6 +14,10 @@ This has info on several thousand colleges and universities in the US. To filter
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE, asis=TRUE}
 source("_packages.R")
 source("R/functions.R")
+
+index_table$Institution <- stringi::stri_trans_general(index_table$Institution, "latin-ascii")
+index_table$City <- stringi::stri_trans_general(index_table$City, "latin-ascii")
+
 index_table$PopupLabel <- paste0("<a href='", index_table$UNITID, ".html'>", index_table$Institution, "</a>")
 index_table$Longitude <- as.numeric(index_table$Longitude)
 index_table$Latitude <- as.numeric(index_table$Latitude)
@@ -42,9 +46,6 @@ crosstalk::filter_select("inst", "Institution", all_colleges, ~Institution)
 You can search to filter by various columns: only show ones in certain states (two letter abbreviation), certain athletic leagues, by college name, etc. To search for phrases, put them in quotes. **Click on buttons to show different tables of information** (and info in one table will be used to filter the other ones). Go to the [about](about.html) page for more about the sources of the data. **Click on a school name to get a page with much more detail about that school.** To look at info by field, go to the [fields](fields_overview.html) page.
 
 Since much of the data come from the US federal government, this website includes only US-based schools. The rest of the planet has excellent institutions which may be a better placement for some.
-
-
-
 
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE, asis=TRUE}
@@ -85,6 +86,8 @@ htmltools::tags$script("
 	function toggle_freshmen_demo() {
 	Reactable.toggleHideColumn('college-list', 'Freshmen % Female')
 	Reactable.toggleHideColumn('college-list', 'Freshmen % Male ')
+	Reactable.toggleHideColumn('college-list', 'Freshmen diversity index')
+
 	Reactable.toggleHideColumn('college-list', 'Freshmen % American Indian or Alaskan Native')
 	Reactable.toggleHideColumn('college-list', 'Freshmen % Asian')
 	Reactable.toggleHideColumn('college-list', 'Freshmen % Black or African American')
@@ -315,7 +318,7 @@ crosstalk::filter_slider("interracialsamesex", "State rep support for interracia
 
 crosstalk::filter_select("biome", "Biome", all_colleges, ~`Biome`)
 
-crosstalk::filter_slider("milestomountains", "Miles to mountains", all_colleges, "Miles to mountains")
+crosstalk::filter_slider("milestomountains", "Miles to mountains", all_colleges, "Miles to mountains", max=500)
 
 ```	
 

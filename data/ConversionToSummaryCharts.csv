@@ -18,7 +18,6 @@ Total instructors,Total instructors,Teaching,FALSE,,None
 Tenure-stream Grand total,Tenure track instructors,Teaching,FALSE,,None
 NTT-stream Grand total,Non-tenure track instructors,Teaching,FALSE,,None
 Percent of revenue from tuition and fees,Revenue from tution and fees,Institution finances,FALSE,Percent,Lower
-Revenue minus expenses,Revenue minus expenses,Institution finances,FALSE,Dollars,Higher
 Total revenues and investment return,Revenue,Institution finances,FALSE,Dollars,None
 Total expenses,Expenses,Institution finances,FALSE,Dollars,None
 Total assets,Assets,Institution finances,FALSE,Dollars,Higher
@@ -102,3 +101,6 @@ Disability percentage numeric,Percent of undergrads with registered disabilities
 Percent first year students from in state,In state,First year student percentages,FALSE,Percent,None
 Percent first year students from US,US,First year student percentages,FALSE,Percent,None
 Percent first year students residence not reported,Not reported,First year student percentages,FALSE,Percent,None
+FirstYearFullTimeDegreeSeekingUndergrads Diversity Index,Freshman diversity index,Diversity,FALSE,Percent,Higher
+Tenure-stream Diversity Index,Tenure-stream diversity index,Diversity,FALSE,Percent,Higher
+NTT-stream Diversity Index,NTT diversity index,Diversity,FALSE,Percent,Higher
