@@ -47,7 +47,7 @@ list(
  tar_target(institution_rmd, command="_institution.Rmd", format="file"),
  tar_target(comparison_table_live, FilterComparisonTableForLive(comparison_table)),
  
- #ar_target(pages_new, RenderSingleInstitutionPage(institution_unitid='166027', comparison_table=comparison_table_live, fields_and_majors=fields_and_majors, maxcount=maxcount, CIPS_codes=CIPS_codes, weatherspark=weatherspark, yml=yml, index_table=index_table, life_expectancy=life_expectancy, population_by_state_by_age=population_by_state_by_age, institution_rmd=institution_rmd, institution_rmd_path="_institution.Rmd", college_chosen_comparison_table=college_chosen_comparison_table)) ,# for debugging changes
+#  tar_target(pages_new, RenderSingleInstitutionPage(institution_unitid='166027', comparison_table=comparison_table_live, fields_and_majors=fields_and_majors, maxcount=maxcount, CIPS_codes=CIPS_codes, weatherspark=weatherspark, yml=yml, index_table=index_table, life_expectancy=life_expectancy, population_by_state_by_age=population_by_state_by_age, institution_rmd=institution_rmd, institution_rmd_path="_institution_new.Rmd", college_chosen_comparison_table=college_chosen_comparison_table)) ,# for debugging changes
  
  tar_target(
 	pages_new, 

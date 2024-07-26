@@ -49,8 +49,37 @@ try({
 	
 	scoring_table <- data.frame()
 	index_focal_vector <- subset(index_table, index_table$UNITID==params$institution_id)
+	college_chosen_comparison_vector <- subset(college_chosen_comparison_table, college_chosen_comparison_table$`focal`==params$institution_id)
+	
+	index_table$Comparison <- ""
+	to_institutions <- strsplit(college_chosen_comparison_vector$`to_all`, ", ")[[1]]
+	from_institutions <- strsplit(college_chosen_comparison_vector$`from_all`, ", ")[[1]]
+	NCES_comparison_institutions <- strsplit(college_chosen_comparison_vector$`NCES_comparison_group_members`, ", ")[[1]]
 	
 	index_table$pseudoranking_difference <- abs(as.numeric(index_table$`pseudoranking`)-as.numeric(index_focal_vector$`pseudoranking`))
+	index_table$pseudoranking_difference[index_table$UNITID==params$institution_id] <- -10000 # so the focal institution is always first
+	
+	index_table$Comparison[index_table$UNITID %in% to_institutions] <- "→"
+	index_table$pseudoranking_difference[index_table$UNITID %in% to_institutions] <- index_table$pseudoranking_difference[index_table$UNITID %in% to_institutions] - 200
+	
+	index_table$Comparison[index_table$UNITID %in% from_institutions] <- paste0(index_table$Comparison[index_table$UNITID %in% from_institutions], "←")
+	index_table$pseudoranking_difference[index_table$UNITID %in% from_institutions] <- index_table$pseudoranking_difference[index_table$UNITID %in% from_institutions] - 200
+	
+	index_table$Comparison <- gsub("→←", "↔", index_table$Comparison)
+
+	
+	
+	index_table$Comparison[index_table$UNITID %in% NCES_comparison_institutions] <- paste0(index_table$Comparison[index_table$UNITID %in% NCES_comparison_institutions], " 🗄")
+	index_table$pseudoranking_difference[index_table$UNITID %in% NCES_comparison_institutions] <- index_table$pseudoranking_difference[index_table$UNITID %in% NCES_comparison_institutions] - 300
+	
+	matching_category <- college_chosen_comparison_table[which(college_chosen_comparison_table$focal==params$institution_id),]$`matching_category`
+	
+	index_table$`NCES Comparison Group` <- "different"
+	matching_indices <- college_chosen_comparison_table$focal[which(college_chosen_comparison_table$`NCES_comparison_group_name`==matching_category)]
+	for (matching_index in seq_along(matching_indices)) {
+		index_table$`NCES Comparison Group`[index_table$UNITID %in% matching_indices[matching_index]] <- matching_category
+	}
+	
 	
 	different_conference <- which(index_table$`Athletic conference`!=unname(index_focal_vector['Athletic conference'])[[1]])
 	
@@ -72,7 +101,7 @@ try({
 		log1p(abs(as.numeric.na0(index_table$`New York`)-as.numeric.na0(index_focal_vector$`New York`))) +
 		log1p(abs(as.numeric.na0(index_table$`Florida`)-as.numeric.na0(index_focal_vector$`Florida`))) +
 		log1p(abs(as.numeric.na0(index_table$`Alaska`)-as.numeric.na0(index_focal_vector$`Alaska`))) +
-		log1p(abs(as.numeric.na0(index_table$`Hawaii`)-as.numeric.na0(index_focal_vector$`Hawaii`)))
+		log1p(abs(as.numeric.na0(index_table$`Hawaii`)-as.numeric.na0(index_focal_vector$`Hawaii`))) 
 
 		
 	
@@ -334,7 +363,7 @@ comparison_conversions <- read.csv("data/ConversionToSummaryCharts.csv")
 comparison_vector <- c("Conference", "Classification")
 headings <- unique(comparison_conversions$Category)
 comparison_df <- data.frame(matrix("", nrow=nrow(comparison_conversions), ncol=4+length(comparison_vector)))
-colnames(comparison_df) <- c(params$institution_name, "Change", "Trend", focal_conference_name, focal_classification_name, "Heading")
+colnames(comparison_df) <- c(params$institution_name, "Change", "Trend", focal_conference_name, focal_classification_name, matching_category, "Heading")
 rownames(comparison_df) <- comparison_conversions$Rename
 max_year_overall <- 0
 min_year_overall <- Inf
@@ -733,7 +762,7 @@ suppressWarnings(suppressMessages({
 
 # Overview of location
 
-* **Abortion in this state**: `r gsub("\\d: ", "", most_current_info['Abortion'])` (based on https://states.guttmacher.org/policies/ as of May 10, 2023)
+* **Abortion in this state**: `r gsub("\\d: ", "", most_current_info['Abortion'])` (based on https://states.guttmacher.org/policies/ as of July 17, 2024)
 * **Gun law stringency**: `r most_current_info['Gun Law Stringency']` (higher grade = [more stringent](https://worldpopulationreview.com/state-rankings/strictest-gun-laws-by-state))
 * **State rep support for contraception**: `r round(100*as.numeric(most_current_info['Proportion of reps voting in favor of respect for right to contraception act']),1)`% of US reps from this state [voted in favor](https://www.congress.gov/bill/117th-congress/house-bill/8373) of legal protections for contraception.
 * **State rep support for recognizing same-sex and interracial marriage**: `r round(100*as.numeric(most_current_info['Proportion of reps voting in favor of respect for marriage act']),1)`% of US reps from this state [voted in favor](https://www.congress.gov/bill/117th-congress/house-bill/8404) of requiring states to recognize same-sex and interracial marriages performed in other states
@@ -760,35 +789,36 @@ suppressWarnings(suppressMessages({
 
 # Similar institutions
 
-This is using information about school size, acceptance rate, yield rate, graduation rate, cost, athletic conference, and similar metrics, but it can miss important axes of similarity (for example, culinary versus hair styling schools).
+This uses info on whether the institution has chosen to compare itself with others (→), is compared to by others (←), if this is mutual (↔), as well as whether *NCES* thinks the schools are comparable (🗄). After that, this uses information about school size, acceptance rate, yield rate, graduation rate, cost, athletic conference, and similar metrics, but it can miss important axes of similarity (for example, culinary versus hair styling schools).
 
 ```{r, eval=TRUE}
 
-similar_table <- index_table[1:100,] %>% dplyr::select(`Institution`, `Admission percentage total`, `Yield percentage total`,  `Grad rate in six years`, `Average net price for students with financial aid`, `Percent of revenue from tuition and fees`, `Student to tenure track faculty ratio`, `Undergrad full time`, `Grad full time`, `State`,  `Full-time undergrad enrollment trend`, `UNITID`)
+try({
+	similar_table <- index_table[1:100,] %>% dplyr::select(`Institution`, `Comparison`, `Admission percentage total`, `Yield percentage total`,  `Grad rate in six years`, `Average net price for students with financial aid`, `Percent of revenue from tuition and fees`, `Student to tenure track faculty ratio`, `Undergrad full time`, `Grad full time`, `State`,  `Full-time undergrad enrollment trend`, `UNITID`)
 
-if(params$institution_id %in% similar_table$`UNITID`) {
+	if(params$institution_id %in% similar_table$`UNITID`) {
 
-	rownames(similar_table) <- NULL
-			
-	similar_table$Institution <- paste0('<a href="', paste0(similar_table$UNITID ,".html"), '">', similar_table$Institution, "</a>")
-	similar_table <- similar_table[,-ncol(similar_table)]
-	
-	good_columns <- c()
-	
-	for (col_index in sequence(ncol(similar_table))) {
-		if(!is.na(similar_table[1,col_index])) {
-			if(nchar(as.character(similar_table[1,col_index]))>0) {
-				good_columns <- append(good_columns, col_index)
+		rownames(similar_table) <- NULL
+				
+		similar_table$Institution <- paste0('<a href="', paste0(similar_table$UNITID ,".html"), '">', similar_table$Institution, "</a>")
+		similar_table <- similar_table[,-ncol(similar_table)]
+		
+		good_columns <- c()
+		
+		for (col_index in sequence(ncol(similar_table))) {
+			if(!is.na(similar_table[1,col_index])) {
+				if(nchar(as.character(similar_table[1,col_index]))>0 || colnames(similar_table)[col_index]=="Comparison") {
+					good_columns <- append(good_columns, col_index)
+				}	
 			}	
-		}	
+		}
+		
+		similar_table <- similar_table[,good_columns]
+
+		DT::datatable(similar_table, rownames=FALSE)
+
 	}
-	
-	similar_table <- similar_table[,good_columns]
-
-	DT::datatable(similar_table, rownames=FALSE)
-
-}
-
+}, silent=TRUE)
 	
 ```
 
@@ -833,6 +863,8 @@ reactable(
 )
 ```
 
+
+
 # Map
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE}
@@ -851,11 +883,14 @@ comparison_df %>% knitr::kable(align="c") %>% kableExtra::kable_styling(bootstra
 
 # Enrollment
 
+
 ```{r, eval=TRUE}
+
+
 	try({
 		pretty_table <- comparison_df[grepl("Enrollment", comparison_df$Heading),-ncol(comparison_df)]
 		pretty_table <- pretty_table[,which((apply(pretty_table, 2, as.character) %>% apply(2, nchar) %>% apply(2, max, na.rm=TRUE))>0)] # this gets rid of empty columns
-		pretty_table %>% knitr::kable(align="c") %>% kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+		DT::datatable(pretty_table, rownames=TRUE, filter="none", options=list(lengthChange = FALSE, searching = FALSE, paging=FALSE, info = FALSE))
 	}, silent=TRUE)
 
 ```
@@ -868,7 +903,7 @@ At many universities, almost no students pay the listed tuition and fees ("stick
 	try({
 		pretty_table <- comparison_df[which(comparison_df$Heading == "Student financing"),-ncol(comparison_df)]
 		pretty_table <- pretty_table[,which((apply(pretty_table, 2, as.character) %>% apply(2, nchar) %>% apply(2, max, na.rm=TRUE))>0)]
-		pretty_table %>% knitr::kable(align="c") %>% kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+		DT::datatable(pretty_table, rownames=TRUE, filter="none", options=list(lengthChange = FALSE, searching = FALSE, paging=FALSE, info = FALSE))
 	}, silent=TRUE)
 
 ```
@@ -880,7 +915,7 @@ At many universities, almost no students pay the listed tuition and fees ("stick
 	pretty_table <- comparison_df[which(comparison_df$Heading == "Teaching"),-ncol(comparison_df)]
 	pretty_table <- pretty_table[,which((apply(pretty_table, 2, as.character) %>% apply(2, nchar) %>% apply(2, max, na.rm=TRUE))>0)]
 
-	pretty_table %>% knitr::kable(align="c") %>% kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+	DT::datatable(pretty_table, rownames=TRUE, filter="none", options=list(lengthChange = FALSE, searching = FALSE, paging=FALSE, info = FALSE))
 	}, silent=TRUE)
 ```
 
@@ -890,7 +925,7 @@ At many universities, almost no students pay the listed tuition and fees ("stick
 	try({
 		pretty_table <- comparison_df[which(comparison_df$Heading == "Student conditions"),-ncol(comparison_df)]
 		pretty_table <- pretty_table[,which((apply(pretty_table, 2, as.character) %>% apply(2, nchar) %>% apply(2, max, na.rm=TRUE))>0)]
-		pretty_table %>% knitr::kable(align="c") %>% kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+		DT::datatable(pretty_table, rownames=TRUE, filter="none", options=list(lengthChange = FALSE, searching = FALSE, paging=FALSE, info = FALSE))
 	}, silent=TRUE)
 
 ```
@@ -906,7 +941,7 @@ Graduation rates for bachelor's degrees within 150% of normal time (6 years for 
 		pretty_table <- comparison_df[which(comparison_df$Heading == "Graduation"),-ncol(comparison_df)]
 		pretty_table <- pretty_table[,which((apply(pretty_table, 2, as.character) %>% apply(2, nchar) %>% apply(2, max, na.rm=TRUE))>0)]
 
-		pretty_table %>% knitr::kable(align="c") %>% kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+		DT::datatable(pretty_table, rownames=TRUE, filter="none", options=list(lengthChange = FALSE, searching = FALSE, paging=FALSE, info = FALSE))
 	}, silent=TRUE)
 ```
 
@@ -921,7 +956,7 @@ Following the practice of the census, the index is multiplied by 100 to give the
 		pretty_table <- comparison_df[which(comparison_df$Heading == "Diversity"),-ncol(comparison_df)]
 		pretty_table <- pretty_table[,which((apply(pretty_table, 2, as.character) %>% apply(2, nchar) %>% apply(2, max, na.rm=TRUE))>0)]
 
-		pretty_table %>% knitr::kable(align="c") %>% kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+		DT::datatable(pretty_table, rownames=TRUE, filter="none", options=list(lengthChange = FALSE, searching = FALSE, paging=FALSE, info = FALSE))
 	}, silent=TRUE)
 ```
 
@@ -934,7 +969,7 @@ Demographic data for first time degree-seeking students. Note that this uses US 
 		pretty_table <- comparison_df[which(comparison_df$Heading == "Freshmen"),-ncol(comparison_df)]
 		pretty_table <- pretty_table[,which((apply(pretty_table, 2, as.character) %>% apply(2, nchar) %>% apply(2, max, na.rm=TRUE))>0)]
 
-		pretty_table %>% knitr::kable(align="c") %>% kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+		DT::datatable(pretty_table, rownames=TRUE, filter="none", options=list(lengthChange = FALSE, searching = FALSE, paging=FALSE, info = FALSE))
 	}, silent=TRUE)
 ```
 
@@ -944,7 +979,7 @@ Demographic data for first time degree-seeking students. Note that this uses US 
 	try({
 		pretty_table <- comparison_df[which(comparison_df$Heading == "First year student percentages"),-ncol(comparison_df)]
 		pretty_table <- pretty_table[,which((apply(pretty_table, 2, as.character) %>% apply(2, nchar) %>% apply(2, max, na.rm=TRUE))>0)]
-		pretty_table %>% knitr::kable(align="c") %>% kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+		DT::datatable(pretty_table, rownames=TRUE, filter="none", options=list(lengthChange = FALSE, searching = FALSE, paging=FALSE, info = FALSE))
 	}, silent=TRUE)
 ```
 
@@ -959,7 +994,7 @@ Tenure track faculty are those who are eligible for tenure. This includes both p
 		pretty_table <- comparison_df[which(comparison_df$Heading == "Tenure stream faculty"),-ncol(comparison_df)]
 		pretty_table <- pretty_table[,which((apply(pretty_table, 2, as.character) %>% apply(2, nchar) %>% apply(2, max, na.rm=TRUE))>0)]
 
-		pretty_table %>% knitr::kable(align="c") %>% kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+		DT::datatable(pretty_table, rownames=TRUE, filter="none", options=list(lengthChange = FALSE, searching = FALSE, paging=FALSE, info = FALSE))
 	}, silent=TRUE)
 ```
 
@@ -973,7 +1008,7 @@ Non-tenure track faculty are not eligible for tenure. Some are hired one semeste
 		pretty_table <- comparison_df[which(comparison_df$Heading == "Non-tenure stream faculty"),-ncol(comparison_df)]
 		pretty_table <- pretty_table[,which((apply(pretty_table, 2, as.character) %>% apply(2, nchar) %>% apply(2, max, na.rm=TRUE))>0)]
 
-		pretty_table %>% knitr::kable(align="c") %>% kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+		DT::datatable(pretty_table, rownames=TRUE, filter="none", options=list(lengthChange = FALSE, searching = FALSE, paging=FALSE, info = FALSE))
 	}, silent=TRUE)
 ```
 
@@ -985,7 +1020,7 @@ Non-tenure track faculty are not eligible for tenure. Some are hired one semeste
 	pretty_table <- comparison_df[which(comparison_df$Heading == "Library facilities"),-ncol(comparison_df)]
 	pretty_table <- pretty_table[,which((apply(pretty_table, 2, as.character) %>% apply(2, nchar) %>% apply(2, max, na.rm=TRUE))>0)]
 
-	pretty_table %>% knitr::kable(align="c") %>% kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+	DT::datatable(pretty_table, rownames=TRUE, filter="none", options=list(lengthChange = FALSE, searching = FALSE, paging=FALSE, info = FALSE))
 	}, silent=TRUE)
 ```
 
@@ -996,7 +1031,7 @@ Non-tenure track faculty are not eligible for tenure. Some are hired one semeste
 		pretty_table <- comparison_df[which(comparison_df$Heading == "SAT scores"),-ncol(comparison_df)]
 		pretty_table <- pretty_table[,which((apply(pretty_table, 2, as.character) %>% apply(2, nchar) %>% apply(2, max, na.rm=TRUE))>0)]
 
-		pretty_table %>% knitr::kable(align="c") %>% kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+		DT::datatable(pretty_table, rownames=TRUE, filter="none", options=list(lengthChange = FALSE, searching = FALSE, paging=FALSE, info = FALSE))
 	}, silent=TRUE)
 ```
 
@@ -1007,7 +1042,7 @@ Non-tenure track faculty are not eligible for tenure. Some are hired one semeste
 		pretty_table <- comparison_df[which(comparison_df$Heading == "ACT scores"),-ncol(comparison_df)]
 		pretty_table <- pretty_table[,which((apply(pretty_table, 2, as.character) %>% apply(2, nchar) %>% apply(2, max, na.rm=TRUE))>0)]
 
-		pretty_table %>% knitr::kable(align="c") %>% kableExtra::kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+		DT::datatable(pretty_table, rownames=TRUE, filter="none", options=list(lengthChange = FALSE, searching = FALSE, paging=FALSE, info = FALSE))
 	}, silent=TRUE)
 ```
 
