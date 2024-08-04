@@ -6,33 +6,125 @@ output:
     includes:
       in_header: GA_Script.html
 params:
-    CIPS_codes: "nothing"
+  CIPS_codes: "nothing"
+  field_data: "nothing"
+  
 ---
+
+This has the number of degrees awarded in the most recent year available. You can click on a column to sort by it. Clicking on a number will go to the page with information on that field and degree level, including which colleges have recently awarded degrees in that field. You can also start typing in the search box to filter the table.
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE}
 source("_packages.R")
 source("R/functions.R")
-#tar_load(CIPS_codes)
 CIPS_codes <- params$CIPS_codes
-CIP_headers <- CIPS_codes[!duplicated(CIPS_codes$CIPFamily),]
-CIP_content <- CIPS_codes[duplicated(CIPS_codes$CIPFamily),]
+field_data <- params$field_data
+CIP_headers <- CIPS_codes[!duplicated(CIPS_codes$CIPFamilyName),]
+CIP_content <- CIPS_codes[duplicated(CIPS_codes$CIPFamilyName),]
+CIP_content <- CIP_content[order(nchar(CIP_content$CIPDefinition), decreasing=TRUE),]
+CIP_content <- CIP_content[!base::duplicated(CIP_content$CIPTitle),]
+field_data_wide <- field_data |> pivot_wider(names_from = Degree, values_from = c(`Degrees completed`, `Schools offering`), names_sep = ": ", values_fill=0)
+
+field_data_merged <- left_join(field_data_wide, CIP_content, by=c("Field"="CIPTitle"))
+
+CIP_headers_simpified <- CIP_headers %>% dplyr::mutate(CIPFamilyHeaderName=CIPFamilyName, CIPFamilyHeaderDefinition=CIPDefinition) %>% dplyr::select(CIPFamilyHeaderName, CIPFamilyHeaderDefinition)
+field_data_merged_with_headers <- left_join(field_data_merged, CIP_headers_simpified, by=c("CIPFamilyName"="CIPFamilyHeaderName"))
+
+
+conversions <- read.csv("data/AbbreviateFieldNames.csv")
+field_data_merged_with_headers <- left_join(field_data_merged_with_headers, conversions, by=c("CIPFamilyName"="CIPFamilyName")) 
+
+
+field_data_merged_with_headers <- field_data_merged_with_headers |> 
+	dplyr::rename( Definition = CIPDefinition, Family=CIPFamilyName, `Family Definition` = CIPFamilyHeaderDefinition) |> 
+	dplyr::select(Area, Field, `Degrees completed: Bachelors`, `Degrees completed: Masters`, `Degrees completed: Doctorate`, `Degrees completed: Associates`, `Degrees completed: Certificate`, Definition) |> dplyr::arrange(desc(`Degrees completed: Bachelors`))
+colnames(field_data_merged_with_headers) <- gsub("Degrees completed: ", "", colnames(field_data_merged_with_headers))
+
 ```
 
-There are `r nrow(CIP_content)` different fields of study, organized into `r nrow(CIP_headers)` broader fields. The following table lists the broader fields and their definitions; you can click on each one to go to a page describing the fields within each.
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE}
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE, results='asis'}
-for (cips_index in sequence(nrow(CIP_headers))) {
 
-	cat(paste0("## ", CIP_headers$CIPFamilyName[cips_index]))
-	cat("\n\n")
-	cat(CIP_headers$CIPDefinition[cips_index])
-	cat("\n\n<a href='", paste0(URLEncodeTotal(CIP_headers$CIPFamilyName[cips_index]), ".html"),"'>Click here for more detail on subfields, including degrees awarded by institutions and deeper descriptions</a>\n\n")
-	#cat("This includes the subfields of: \n\n")
-	#focal_titles <- CIP_content$CIPTitle[CIP_content$CIPFamily == CIP_headers$CIPFamily[cips_index]]
-	#focal_titles <- unique(gsub(", Other", "", gsub(", General", "", focal_titles)))
-	#cat(paste0('* ', focal_titles, "\n\n"))
-	#cat("\n\n<a href='", paste0(URLEncodeTotal(CIP_headers$CIPFamilyName[cips_index]), ".html"),"'>\n\nMore info</a> [same link as above]\n\n")
+#field_family_level <- field_data_merged_with_headers |> group_by(Family) %>% summarize(`Total Bachelors` = sum(`Bachelors`), `Total Masters` = sum(`Masters`), `Total Doctorates` = sum(`Doctorate`), `Total Associates` = sum(`Associates`), `Total Certificates` = sum(`Certificate`)) |> dplyr::arrange(desc(`Total Bachelors`))
 
-	cat("\n\n")	
-}
+field_data_merged_with_headers$BachelorsURL <- URLEncodeTotal(paste0("majors_","Bachelors", "_",  gsub('/', "_",gsub(",", "_", gsub(" ", "", field_data_merged_with_headers$Field)))))
+
+field_data_merged_with_headers$MastersURL <- URLEncodeTotal(paste0("majors_","Masters", "_",  gsub('/', "_",gsub(",", "_", gsub(" ", "", field_data_merged_with_headers$Field)))))
+
+field_data_merged_with_headers$DoctorateURL <- URLEncodeTotal(paste0("majors_","Doctorate", "_",  gsub('/', "_",gsub(",", "_", gsub(" ", "", field_data_merged_with_headers$Field)))))
+
+field_data_merged_with_headers$AssociatesURL <- URLEncodeTotal(paste0("majors_","Associates", "_",  gsub('/', "_",gsub(",", "_", gsub(" ", "", field_data_merged_with_headers$Field)))))
+
+field_data_merged_with_headers$CertificateURL <- URLEncodeTotal(paste0("majors_","Certificate", "_",  gsub('/', "_",gsub(",", "_", gsub(" ", "", field_data_merged_with_headers$Field)))))
+
+field_data_merged_with_headers$Field <- gsub(", General$", "", field_data_merged_with_headers$Field) #just to save on space
+
+
+
+#reactable(
+#  field_family_level,
+#  details = function(index) {
+#    degrees <- filter(field_data_merged_with_headers, Family==field_family_level$Family[index]) |> dplyr::select(-Family)
+#    tbl <- reactable(degrees, outlined = TRUE, highlight = TRUE, fullWidth = FALSE)
+#    htmltools::div(style = list(margin = "12px 45px"), tbl)
+#  },
+#  onClick = "expand",
+#  rowStyle = list(cursor = "pointer")
+#)
 ```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE}
+reactable(
+  field_data_merged_with_headers,
+  searchable = TRUE,
+  highlight = TRUE,
+  striped = TRUE,
+	show=FALSE
+ ),
+	columns = list(
+		Area = colDef(minWidth = 100, show=TRUE),
+		Field = colDef(minWidth = 200, show=TRUE),
+		Bachelors = colDef(html = TRUE, format=colFormat(separators=TRUE), show=TRUE, cell = JS('
+			function(cellInfo) {
+			// Render as a link
+			const url = `${cellInfo.row["BachelorsURL"]}.html`
+			return `<a href="${url}" target="_blank">${cellInfo.value}</a>`
+			}
+		')
+		),
+		Masters = colDef(html = TRUE, format=colFormat(separators=TRUE), show=TRUE, cell = JS('
+			function(cellInfo) {
+			// Render as a link
+			const url = `${cellInfo.row["MastersURL"]}.html`
+			return `<a href="${url}" target="_blank">${cellInfo.value}</a>`
+			}
+		')
+		),	
+		Doctorate = colDef(html = TRUE, format=colFormat(separators=TRUE), show=TRUE, cell = JS('
+			function(cellInfo) {
+			// Render as a link
+			const url = `${cellInfo.row["DoctorateURL"]}.html`
+			return `<a href="${url}" target="_blank">${cellInfo.value}</a>`
+			}
+		')
+		),	
+		Associates = colDef(html = TRUE, format=colFormat(separators=TRUE), show=TRUE, cell = JS('
+			function(cellInfo) {
+			// Render as a link
+			const url = `${cellInfo.row["AssociatesURL"]}.html`
+			return `<a href="${url}" target="_blank">${cellInfo.value}</a>`
+			}
+		')
+		),
+		Certificate = colDef(html = TRUE, format=colFormat(separators=TRUE), show=TRUE, cell = JS('
+			function(cellInfo) {
+			// Render as a link
+			const url = `${cellInfo.row["CertificateURL"]}.html`
+			return `<a href="${url}" target="_blank">${cellInfo.value}</a>`
+			}
+		')
+		),
+		Definition = colDef(minWidth = 500, show=TRUE)
+	) 
+)
+```
+

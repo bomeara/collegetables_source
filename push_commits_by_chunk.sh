@@ -1,6 +1,6 @@
 REMOTE=origin
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
-BATCH_SIZE=10
+BATCH_SIZE=10 # original size 10
 
 # check if the branch exists on the remote
 # if git show-ref --quiet --verify refs/remotes/$REMOTE/$BRANCH; then

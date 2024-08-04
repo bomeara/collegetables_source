@@ -1702,8 +1702,10 @@ RenderStatePages <- function(degree_granting, students_by_state_by_institution, 
 }
 
 # pages is there just so it will run this after the pages are run
-RenderIndexPageEtAl <- function(pages, index_table, yml, CIPS_codes, comparison_table) {
+RenderIndexPageEtAl <- function(pages, index_table, yml, CIPS_codes, comparison_table, fields_and_majors) {
 	system("rm docs/index.html")
+	db <- dbConnect(RSQLite::SQLite(), "data/db_IPEDS.sqlite")
+
 	#system("rm docs/degrees_by*")
 	rmarkdown::render(
 		input="_about.Rmd", 
@@ -1711,11 +1713,21 @@ RenderIndexPageEtAl <- function(pages, index_table, yml, CIPS_codes, comparison_
 		quiet=FALSE
 	)
 	
+	# rmarkdown::render(
+	# 	input="_fields_overview_OLD.Rmd", 
+	# 	output_file="docs/fields_overview.html", 
+	# 	params = list(
+	# 		CIPS_codes = CIPS_codes
+	# 	),
+	# 	quiet=FALSE
+	# )	
+	
 	rmarkdown::render(
 		input="_fields_overview.Rmd", 
 		output_file="docs/fields_overview.html", 
 		params = list(
-			CIPS_codes = CIPS_codes
+			CIPS_codes = CIPS_codes,
+			field_data = tbl(db, fields_and_majors[1]) %>% as.data.frame()
 		),
 		quiet=FALSE
 	)	
@@ -1732,6 +1744,16 @@ RenderIndexPageEtAl <- function(pages, index_table, yml, CIPS_codes, comparison_
 	rmarkdown::render(
 				input="_index.Rmd", 
 				output_file="docs/index.html", 
+				params = list(
+					index_table = index_table
+				),
+				quiet=TRUE
+	)
+	
+		
+	rmarkdown::render(
+				input="_vertical.Rmd", 
+				output_file="docs/vertical.html", 
 				params = list(
 					index_table = index_table
 				),
@@ -1763,7 +1785,7 @@ RenderIndexPageEtAl <- function(pages, index_table, yml, CIPS_codes, comparison_
 	# 			output_file="docs/degrees_by_type.html", 
 	# 			quiet=TRUE
 	# )
-
+	dbDisconnect(db)
 }
 
 FilterForTopAndSave <- function(overview) {
@@ -2349,6 +2371,8 @@ CreateIndexTable <- function(comparison_table) {
 	enrollment_slopes <- rep("", length(unique(index_table$UNITID)))
 	revenue_slopes <- rep("", length(unique(index_table$UNITID)))
 	assets_slopes <- rep("", length(unique(index_table$UNITID)))
+	freshman_diversity_slopes <-  rep("", length(unique(index_table$UNITID)))
+	TT_diversity_slopes <- rep("", length(unique(index_table$UNITID)))
 
 	unique_UNITIDs <- unique(index_table$UNITID)
 	
@@ -2413,6 +2437,46 @@ CreateIndexTable <- function(comparison_table) {
 					assets_slopes[UNITID_index] <- change[1]
 				} else {
 					assets_slopes[UNITID_index] <- 'Approximately stable'	
+				}
+			}
+		})
+		
+		#freshman_diversity_slopes
+		freshman_diversity_data <- subset(index_table, index_table$UNITID==UNITID_number) %>% dplyr::select('Freshman diversity index', 'IPEDS Year') %>% dplyr::rename('Year'='IPEDS Year') %>% dplyr::mutate(FYFTDiversity=as.numeric(`Freshman diversity index`)) %>% dplyr::mutate(Year=as.numeric(Year)) %>% dplyr::filter(!is.na(FYFTDiversity)) %>% dplyr::filter(!is.na(Year))
+		try({
+			if(nrow(freshman_diversity_data)>1) {
+				fit <- stats::lm(FYFTDiversity ~ Year, data=freshman_diversity_data)
+				if(summary(fit)$coefficients[2,4]<0.05) {
+					slope <- round(summary(fit)$coefficients[2,1],0)
+					change <- c('Increasing', 'gaining')
+					if(sign(summary(fit)$coefficients[2,1])<0) {
+						change <- c('Decreasing', "losing")
+					}
+					#CI <- round(unname(confint(fit)[2,]),0)
+					#enrollment_slopes[UNITID_index] <- paste0(change[1], " (", change[2]," ", abs(slope), " full-time undergrads per year)")
+					freshman_diversity_slopes[UNITID_index] <- change[1]
+				} else {
+					freshman_diversity_slopes[UNITID_index] <- 'Approximately stable'	
+				}
+			}
+		})
+		
+		# TT_diversity_slopes
+		TT_diversity_data <- subset(index_table, index_table$UNITID==UNITID_number) %>% dplyr::select('Tenure-stream diversity index', 'IPEDS Year') %>% dplyr::rename('Year'='IPEDS Year') %>% dplyr::mutate(TTDiversity=as.numeric(`Tenure-stream diversity index`)) %>% dplyr::mutate(Year=as.numeric(Year)) %>% dplyr::filter(!is.na(TTDiversity)) %>% dplyr::filter(!is.na(Year))
+		try({
+			if(nrow(TT_diversity_data)>1) {
+				fit <- stats::lm(TTDiversity ~ Year, data=TT_diversity_data)
+				if(summary(fit)$coefficients[2,4]<0.05) {
+					slope <- round(summary(fit)$coefficients[2,1],0)
+					change <- c('Increasing', 'gaining')
+					if(sign(summary(fit)$coefficients[2,1])<0) {
+						change <- c('Decreasing', "losing")
+					}
+					#CI <- round(unname(confint(fit)[2,]),0)
+					#enrollment_slopes[UNITID_index] <- paste0(change[1], " (", change[2]," ", abs(slope), " full-time undergrads per year)")
+					TT_diversity_slopes[UNITID_index] <- change[1]
+				} else {
+					TT_diversity_slopes[UNITID_index] <- 'Approximately stable'	
 				}
 			}
 		})

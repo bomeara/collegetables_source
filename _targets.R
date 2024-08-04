@@ -59,6 +59,6 @@ list(
  tar_target(yml, CreateYMLForSite(CIPS_codes)),
  tar_target(field_pages, RenderFieldPages(CIPS_codes, fields_and_majors, yml)),
  tar_target(majors, RenderMajorsPages(fields_and_majors, CIPS_codes, yml, maxcount)),
- tar_target(index_et_al, RenderIndexPageEtAl(pages_new, index_table, yml, CIPS_codes, comparison_table))
+ tar_target(index_et_al, RenderIndexPageEtAl(pages_new, index_table, yml, CIPS_codes, comparison_table, fields_and_majors))
 
 )

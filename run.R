@@ -6,6 +6,7 @@ library(targets)
 source("_packages.R")
 source("R/functions.R")
 
+tar_invalidate(index_et_al)
 
 tar_option_set(memory = "transient", garbage_collection = TRUE)
 
@@ -24,3 +25,6 @@ tar_make(callr_function = NULL)
 
 #system('rsync -avz --delete --exclude=".*" docs/ ../collegetables_site/')
 #system("cp CNAME ../collegetables_site/CNAME")
+
+system("open docs/vertical.html")
+
