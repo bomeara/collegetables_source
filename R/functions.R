@@ -220,7 +220,7 @@ GetIPEDSDirectly <- function(years=as.numeric(format(Sys.Date(), "%Y")):2012, IP
 } 
 
 # Idea here is one table to rule them all with all the info we want to compare between schools. 
-CreateComparisonTables <- function(ipeds_direct_and_db) { 
+CreateComparisonTables <- function(ipeds_direct_and_db, exclude_no_degrees=TRUE) { 
 	db <- dbConnect(RSQLite::SQLite(), "data/db_IPEDS.sqlite")
 	comparison_table <- tbl(db, "Institutional_directory") %>% dplyr::select(c(
 		"UNITID.Unique.identification.number.of.the.institution",
@@ -771,6 +771,11 @@ CreateComparisonTables <- function(ipeds_direct_and_db) {
 		comparison_table$`Percent first year students from in state`[row_index] <- round(100*as.numeric(comparison_table[row_index, state_column])/comparison_table$`First year students from anywhere`[row_index],1)
 	}
 	
+	if(exclude_no_degrees) {
+		
+		comparison_table <- comparison_table[grepl("Degree", comparison_table$`Institutional category`, ignore.case=FALSE),] # Degree-granting starts all the ones giving degrees
+	}
+	
 	dbWriteTable(db,  "comparison_table", comparison_table, overwrite=TRUE)
 
 	
@@ -1216,6 +1221,10 @@ AppendMarriageRespectOld <- function(college_data) {
 	return(left_join(college_data, marriage_aggregated_simple, by="State abbreviation"))
 }
 
+StateLongToAbbreviation <- function(x) {
+	return(state.abb[match(x,state.name)])
+}
+
 AppendMarriageRespect <- function(comparison_table) {
 	print("Appending marriage respect data")
 	marriage_defense <- read.csv("external_data/MarriageAct_HR8404_2022.csv", header=TRUE)
@@ -1550,6 +1559,69 @@ RenderInstitutionPagesNew <- function(comparison_table, fields_and_majors, maxco
 	return(failures)
 }
 
+
+RenderInstitutionPagesComparison <- function(comparison_table, fields_and_majors, maxcount=40, CIPS_codes, yml, index_table, population_by_state_by_age, college_chosen_comparison_table) {
+	
+	institution_ids <- unique(comparison_table$`UNITID Unique identification number of the institution`)
+	dead_institutions <- subset(comparison_table, comparison_table$`Status of institution`%in% c('Closed in current year (active has data)', 'Combined with other institution ', 'Delete out of business'))
+	institution_ids <- setdiff(institution_ids, dead_institutions$`UNITID Unique identification number of the institution`)
+	comparison_table <- subset(comparison_table, comparison_table$`UNITID Unique identification number of the institution` %in% institution_ids) # remove dead institutions so we don't compare with them
+	
+	# prioritize the "selective" schools to render first
+	
+	comparison_table$pseudoranking <- (100 - as.numeric.na0(comparison_table$`Admission percentage total`)) + as.numeric.na0(comparison_table$`Yield percentage total`) + as.numeric.na0(comparison_table$`Undergrad full time`) + as.numeric.na0(comparison_table$`Tenure-stream Grand total`)
+	comparison_table$pseudoranking[is.na(comparison_table$pseudoranking)] <- 0
+	comparison_table <- comparison_table[order(comparison_table$pseudoranking, decreasing=TRUE),]
+
+	rejection_ranking <- comparison_table[order(comparison_table$pseudoranking, decreasing=TRUE),] 
+	institution_ids <- unique(rejection_ranking$`UNITID Unique identification number of the institution`)
+	
+	
+
+	
+	failures <- c()
+	#for (i in seq_along(institutions)) {
+	for (i in sequence(min(maxcount, length(institution_ids)))) {
+		failed <- TRUE
+		try({
+			institution_id <- institution_ids[i]
+			institution_name <- rownames(t(t(sort(table(comparison_table$`Institution entity name`[comparison_table$`UNITID Unique identification number of the institution` == institution_id]), decreasing=TRUE))))[1] # sometimes the name changes a bit; take the most common one		
+			print(paste0("Rendering ", institution_name, " (", i, " of ", length(institution_ids), ") with id ", institution_id))
+			
+			rmarkdown::render(
+				input="_institution_comparison.Rmd", 
+				output_file="docs/institution.html", 
+				params = list(
+					institution_name = institution_name,
+					institution_long_name = institution_name,
+					institution_id =  institution_id,
+					comparison_table = comparison_table,
+					index_table=index_table,
+					population_by_state_by_age=population_by_state_by_age
+				),
+				quiet=TRUE
+			)
+			Sys.sleep(1)
+			system("sed -i '' 's/&gt;/>/g' docs/institution.html") # because htmlTable doesn't escape well; the '' is a requirement of OS X's version of sed, apparently
+			system("sed -i '' 's/&lt;/</g' docs/institution.html")
+			
+			Sys.sleep(1)
+
+
+			file.copy("docs/institution.html", paste0("docs/", utils::URLencode(gsub(" ", "", institution_id)), ".html"), overwrite=TRUE)
+			print(paste0("docs/", utils::URLencode(gsub(" ", "", institution_id)), ".html"))
+			print(paste0("Institution ", i, " of ", length(institution_ids), " rendered, ", 100*i/length(institution_ids), "% complete"))
+			system(paste0("open docs/", utils::URLencode(gsub(" ", "", institution_id)), ".html"))
+			Sys.sleep(1)
+			failed <- FALSE
+		}, silent=TRUE)
+		if(failed) {
+			failures <- c(failures, comparison_table$`Institution entity name`[i])
+		}
+	}
+	return(failures)
+}
+
 FilterComparisonTableForLive <- function(comparison_table) {
 	#institution_rmd just to track changes in that page
 	institution_ids <- unique(comparison_table$`UNITID Unique identification number of the institution`)
@@ -1701,8 +1773,15 @@ RenderStatePages <- function(degree_granting, students_by_state_by_institution, 
 	return(failures)
 }
 
+GetFieldData <- function(fields_and_majors) {
+	db <- dbConnect(RSQLite::SQLite(), "data/db_IPEDS.sqlite")
+	field_data = tbl(db, fields_and_majors[1]) |> as.data.frame()
+	dbDisconnect(db)
+	return(field_data)
+}
+
 # pages is there just so it will run this after the pages are run
-RenderIndexPageEtAl <- function(pages, index_table, yml, CIPS_codes, comparison_table, fields_and_majors) {
+RenderIndexPageEtAl <- function(pages, index_table, yml, CIPS_codes, comparison_table, fields_and_majors, field_data) {
 	system("rm docs/index.html")
 	db <- dbConnect(RSQLite::SQLite(), "data/db_IPEDS.sqlite")
 
@@ -1727,7 +1806,7 @@ RenderIndexPageEtAl <- function(pages, index_table, yml, CIPS_codes, comparison_
 		output_file="docs/fields_overview.html", 
 		params = list(
 			CIPS_codes = CIPS_codes,
-			field_data = tbl(db, fields_and_majors[1]) %>% as.data.frame()
+			field_data = field_data
 		),
 		quiet=FALSE
 	)	
@@ -1750,15 +1829,16 @@ RenderIndexPageEtAl <- function(pages, index_table, yml, CIPS_codes, comparison_
 				quiet=TRUE
 	)
 	
-		
-	rmarkdown::render(
-				input="_vertical.Rmd", 
-				output_file="docs/vertical.html", 
-				params = list(
-					index_table = index_table
-				),
-				quiet=TRUE
-	)
+	# Very pretty, but final page is ~400 MB. Too big.
+	
+	# rmarkdown::render(
+	# 			input="_vertical.Rmd", 
+	# 			output_file="docs/vertical.html", 
+	# 			params = list(
+	# 				index_table = index_table
+	# 			),
+	# 			quiet=FALSE
+	# )
 
 	rmarkdown::render(
 				input="_map.Rmd", 
@@ -2099,6 +2179,14 @@ PrependHttpsIfNeeded <- function(url) {
 
 FirstNaOmit <- function(x) {
 	return(dplyr::first(na.omit(x)))	
+}
+
+ListNaOmit <- function(x) {
+	return(list(as.numeric(na.omit(x))))		
+}
+
+VectorStringNaOmit <- function(x) {
+	return(paste(as.numeric(na.omit(x)), collapse=","))		
 }
 
 
@@ -2870,17 +2958,19 @@ CreateComparisonNetwork <- function(placeholder, comparison_table) {
 	ComparisonBoth$NCES_comparison_group_members <- NA
 	ComparisonBoth$NCES_comparison_group_name <- NA
 	for (i in sequence(nrow(ComparisonBoth))) {
-		ComparisonBoth$to_all[i] <- ComparisonInputGrouped$to[match(ComparisonBoth$focal[i], ComparisonInputGrouped$from)]
-		to_vector <- strsplit(ComparisonBoth$to_all[i], ", ")[[1]]
-		ComparisonBoth$from_all[i] <- ComparisonOutputGrouped$from[match(ComparisonBoth$focal[i], ComparisonOutputGrouped$to)]
-		from_vector <- strsplit(ComparisonBoth$from_all[i], ", ")[[1]]
-		ComparisonBoth$to_only[i] <- paste0(setdiff(to_vector, from_vector), collapse=", ")
-		ComparisonBoth$from_only[i] <- paste0(setdiff(from_vector, to_vector), collapse=", ")
-		ComparisonBoth$mutuals[i] <- paste0(intersect(to_vector, from_vector), collapse=", ")
-		ComparisonBoth$NCES_comparison_group_name[i] <- subset(comparison_table, `UNITID Unique identification number of the institution`==ComparisonBoth$focal[i])$`Data Feedback Report comparison group created by NCES`
-		NCES_comparisons <- subset(comparison_table, `Data Feedback Report comparison group created by NCES`==ComparisonBoth$NCES_comparison_group_name[i])
-		NCES_comparisons <- subset(NCES_comparisons, NCES_comparisons$`UNITID Unique identification number of the institution`!=ComparisonBoth$focal[i])
-		ComparisonBoth$NCES_comparison_group_members[i] <- paste0(NCES_comparisons$`UNITID Unique identification number of the institution`, collapse=", ")
+		try({
+			ComparisonBoth$to_all[i] <- ComparisonInputGrouped$to[match(ComparisonBoth$focal[i], ComparisonInputGrouped$from)]
+			to_vector <- strsplit(ComparisonBoth$to_all[i], ", ")[[1]]
+			ComparisonBoth$from_all[i] <- ComparisonOutputGrouped$from[match(ComparisonBoth$focal[i], ComparisonOutputGrouped$to)]
+			from_vector <- strsplit(ComparisonBoth$from_all[i], ", ")[[1]]
+			ComparisonBoth$to_only[i] <- paste0(setdiff(to_vector, from_vector), collapse=", ")
+			ComparisonBoth$from_only[i] <- paste0(setdiff(from_vector, to_vector), collapse=", ")
+			ComparisonBoth$mutuals[i] <- paste0(intersect(to_vector, from_vector), collapse=", ")
+			ComparisonBoth$NCES_comparison_group_name[i] <- subset(comparison_table, `UNITID Unique identification number of the institution`==ComparisonBoth$focal[i])$`Data Feedback Report comparison group created by NCES`
+			NCES_comparisons <- subset(comparison_table, `Data Feedback Report comparison group created by NCES`==ComparisonBoth$NCES_comparison_group_name[i])
+			NCES_comparisons <- subset(NCES_comparisons, NCES_comparisons$`UNITID Unique identification number of the institution`!=ComparisonBoth$focal[i])
+			ComparisonBoth$NCES_comparison_group_members[i] <- paste0(NCES_comparisons$`UNITID Unique identification number of the institution`, collapse=", ")
+		}, silent=TRUE) # try b/c when we prune for only degree granting, some might still be in the db but not in the comparison table
 	}
 
 	return(ComparisonBoth)
@@ -2901,3 +2991,4 @@ WWFload <- function(x = NULL) {
         "wwf_terr_ecos.shp"))
     return(wwf)
 }
+
