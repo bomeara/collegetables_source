@@ -78,8 +78,9 @@ reactable(
   searchable = TRUE,
   highlight = TRUE,
   striped = TRUE,
-	show=FALSE
- ),
+  defaultColDef = colDef(
+	show = FALSE
+  ),
 	columns = list(
 		Area = colDef(minWidth = 100, show=TRUE),
 		Field = colDef(minWidth = 200, show=TRUE),
