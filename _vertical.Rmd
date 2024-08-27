@@ -1,0 +1,467 @@
+---
+title: College Tables
+output:
+  rmdformats::readthedown:
+    self_contained: false
+    includes:
+      in_header: GA_Script.html
+params:
+  index_table: "nothing"
+---
+
+VERTICAL 2
+
+This has info on several thousand colleges and universities in the US. To filter for individual schools, start typing any part of the school's name in the institution box. After clicking one, you can keep typing and add more to the list. Below the table are more filtering options.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE, asis=TRUE}
+source("_packages.R")
+source("R/functions.R")
+
+
+index_table$Institution <- stringi::stri_trans_general(index_table$Institution, "latin-ascii")
+index_table$City <- stringi::stri_trans_general(index_table$City, "latin-ascii")
+
+index_table$PopupLabel <- paste0("<a href='", index_table$UNITID, ".html'>", index_table$Institution, "</a>")
+index_table$Longitude <- as.numeric(index_table$Longitude)
+index_table$Latitude <- as.numeric(index_table$Latitude)
+index_table$Category[nchar(index_table$Category)<2] <- "Not reported"
+index_table$Category[is.na(index_table$Category)] <- "Not reported"
+all_colleges <- index_table
+all_colleges <- all_colleges |> dplyr::relocate(Institution, .before=everything())
+
+all_colleges <- subset(all_colleges, all_colleges$Active=="Yes")
+all_colleges$netprice <- as.numeric(all_colleges$`Average net price for students with financial aid`)
+all_colleges$percentfreshmenwomen <- as.numeric(all_colleges$`Freshmen % Female`)
+all_colleges$percentfreshmenwhite <- as.numeric(all_colleges$`Freshmen % White`)
+all_colleges$percentfreshmenblack <- as.numeric(all_colleges$`Freshmen % Black or African American`)
+all_colleges$percentfreshmenasian <- as.numeric(all_colleges$`Freshmen % Asian`)
+all_colleges$percentfreshmenamericanindian <- as.numeric(all_colleges$`Freshmen % American Indian or Alaskan Native`)
+all_colleges$percentfreshmenhispanic <- as.numeric(all_colleges$`Freshmen % Hispanic`)
+all_colleges$percentfreshmenpacificislander <- as.numeric(all_colleges$`Freshmen % Pacific Islander`)
+all_colleges$percentcontraceptivesupport <- as.numeric(all_colleges$`State rep support for contraception`)
+all_colleges$interracialsamesexmarriage <- as.numeric(all_colleges$`State support for interracial and same-sex marriage`)
+all_colleges$gradratesixyear <- as.numeric(all_colleges$`Grad rate in six years`)
+all_colleges$`Percent of undergrads registered with disabilities` <- as.numeric(all_colleges$`Percent of undergrads registered with disabilities`)
+
+
+#all_colleges <- all_colleges |> slice(1:100)
+
+all_colleges_df <- all_colleges
+
+all_colleges_overview <- all_colleges |> dplyr::select(Institution, State, `Admission percentage total`, `Yield percentage total`, `Grad rate in six years`, `Transfer out rate`, `Student to tenure track faculty ratio`, `Average net price for students with financial aid`, `UNITID`)
+
+
+all_colleges_overview_df <- all_colleges_overview
+
+all_colleges_overview <- SharedData$new(all_colleges_overview, ~Institution, group="Institution")
+
+
+all_colleges_admissions <- all_colleges |> dplyr::select(Institution, `Admission percentage total`, `Admission percentage women`, `Admission percentage men`,`Yield percentage total`, `Yield percentage women`, `Yield percentage men`, `SAT Math 25th percentile`, `SAT Math 75th percentile`, `SAT Verbal 25th percentile`, `SAT Verbal 75th percentile`, `ACT Math 25th percentile`, `ACT Math 75th percentile`, `ACT English 25th percentile` , `ACT English 75th percentile`, `ACT Composite 25th percentile`, `ACT Composite 75th percentile`, `UNITID`)
+
+all_colleges_admissions_df <- all_colleges_admissions
+
+all_colleges_admissions <- SharedData$new(all_colleges_admissions, ~Institution, group="Institution")
+
+#save(all_colleges, file="~/Downloads/all_colleges.RData")
+
+all_colleges_demographics <- all_colleges |> dplyr::select(
+	Institution, 
+	`Freshman diversity index`, 
+	`Tenure-stream diversity index`, 
+	`NTT diversity index`, 
+	`Freshmen % Female`, 
+	`Freshmen % Male `, 
+	`Percent first year students from in state`,
+	`Percent first year students from US`,
+	`Percent of undergrads registered with disabilities`,
+	`Freshmen % American Indian or Alaskan Native`,
+	`Freshmen % Asian`,
+	`Freshmen % Black or African American`,
+	`Freshmen % Hispanic`,
+	`Freshmen % Nonresident alien percentage`,
+	`Freshmen % Pacific Islander`,
+	`Freshmen % Two or more races`,
+	`Freshmen % White`, 
+	`UNITID`
+	)
+	
+all_colleges_demographics_df <- all_colleges_demographics
+
+all_colleges_demographics <- SharedData$new(all_colleges_demographics, ~Institution, group="Institution")
+
+all_colleges_general <- all_colleges |> dplyr::select(
+	Institution, 
+	`Undergrad full time`,
+	`Grad full time`,
+	`Tenure-stream faculty`,
+	`Non-tenure stream faculty`,
+	`Size and setting`, 
+	`Enrollment profile`, 
+	`Overall type`, 
+	`HBCU`, 
+	`Tribal College`, 
+	`Athletic conference`,
+	`Freshmen required to live on campus`,
+	`Biome`,
+	`Ecological region`,
+	`Realm`,
+	`Miles to mountains`,
+	`Urbanization`,
+	`Physical library circulations per students and faculty`,
+	`Digital library circulations per students and faculty`,
+	`Anti-trans legislative risk`,
+	`Abortion availability`,
+	`Gun law stringency`,
+	`Censured by AAUP`,
+	`State rep support for contraception`,
+	`State support for interracial and same-sex marriage`,
+	`UNITID`
+)
+
+all_colleges_general_df <- all_colleges_general
+
+all_colleges_general <- SharedData$new(all_colleges_general, ~Institution, group="Institution")
+
+
+
+all_colleges <- SharedData$new(all_colleges, ~Institution, group="Institution")
+
+crosstalk::filter_select("inst", "Institution", all_colleges_overview, ~Institution)
+
+
+```
+
+You can search to filter by various columns: only show ones in certain states (two letter abbreviation), certain athletic leagues, by college name, etc. To search for phrases, put them in quotes. **Click on buttons to show different tables of information** (and info in one table will be used to filter the other ones). Go to the [about](about.html) page for more about the sources of the data. **Click on a school name to get a page with much more detail about that school.** To look at info by field, go to the [fields](fields_overview.html) page.
+
+Since much of the data come from the US federal government, this website includes only US-based schools. The rest of the planet has excellent institutions which may be a better placement for some.
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE, asis=TRUE}
+
+index_conversions <- read.csv("data/ConversionToIndexTableVertical.csv")
+
+category_orderings <- c('Overview', "Location", "Admissions", "Finances", "Academics", "Student Life", "Safety", "Freshmen demographics")
+
+for (focal_category in category_orderings) {
+	focal_columns <- index_conversions$Rename[index_conversions$Category==focal_category] 
+	focal_columns <- paste0("Reactable.toggleHideColumn('college-list', '", focal_columns, "')")
+	htmltools::tags$script(paste0("function toggle", tolower(gsub(" ", "_", focal_category)), "() {\n", focal_columns, "\n}", collapse = "; "))
+}
+
+```	
+
+
+## Summary table {.tabset}
+
+### Overview
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE, asis=TRUE}
+
+fill_color_scheme <- RColorBrewer::brewer.pal(11, "RdYlGn")
+
+all_colleges_overview |> reactable(
+        defaultColDef = colDef(
+            align = 'left',
+            cell = gauge_chart(
+                data = all_colleges_overview_df,
+                number_fmt = scales::comma,
+				fill_color = fill_color_scheme,
+				show_min_max = TRUE
+            )
+        ),
+		columns = list(
+			Institution = colDef(html = TRUE, show=TRUE, sticky="left", cell = 
+				JS('
+					function(cellInfo) {
+						// Render as a link
+						const url = `${cellInfo.row["UNITID"]}.html`
+						return `<a href="${url}" target="_blank">${cellInfo.value}</a>`
+					}
+				')
+			),
+			`Admission percentage total` = colDef(
+				show=TRUE,
+	            cell = gauge_chart(
+					data = all_colleges_overview_df,
+					number_fmt = scales::comma,
+					fill_color = rev(fill_color_scheme),
+					show_min_max = TRUE
+				)			
+			),
+			`Transfer out rate` = colDef(
+				show=TRUE,
+	            cell = gauge_chart(
+					data = all_colleges_overview_df,
+					number_fmt = scales::comma,
+					fill_color = rev(fill_color_scheme),
+					show_min_max = TRUE
+				)			
+			),
+			`Student to tenure track faculty ratio` = colDef(
+				show=TRUE,
+	            cell = gauge_chart(
+					data = all_colleges_overview_df,
+					number_fmt = scales::comma,
+					fill_color = rev(fill_color_scheme),
+					show_min_max = TRUE
+				)			
+			),
+			UNITID = colDef(show=FALSE),
+			`Average net price for students with financial aid` = colDef(
+				show=TRUE,
+	            cell = data_bars(
+					data = all_colleges_overview_df,
+					fill_color = rev(fill_color_scheme),
+					fill_opacity = 0.8,
+					text_color = 'black',
+					round_edges = TRUE,
+					text_position = 'center',
+					number_fmt = scales::comma
+				)		
+			),
+			State = colDef(
+				show=TRUE,
+				cell = function(value) {
+      				state.abb[match(value,state.name)]
+    			}
+			)
+		)
+    )
+
+
+```
+
+### Admissions
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE, asis=TRUE}
+
+all_colleges_admissions |> reactable(
+        defaultColDef = colDef(
+            align = 'left',
+            cell = gauge_chart(
+                data = all_colleges_admissions_df,
+                number_fmt = scales::comma,
+				fill_color = fill_color_scheme,
+				show_min_max = TRUE
+            )
+        ),
+		columns = list(
+			Institution = colDef(html = TRUE, show=TRUE, sticky="left", cell = 
+				JS('
+					function(cellInfo) {
+						// Render as a link
+						const url = `${cellInfo.row["UNITID"]}.html`
+						return `<a href="${url}" target="_blank">${cellInfo.value}</a>`
+					}
+				')
+			),
+			`Admission percentage total` = colDef(
+				show=TRUE,
+	            cell = gauge_chart(
+					data = all_colleges_admissions_df,
+					number_fmt = scales::comma,
+					fill_color = rev(fill_color_scheme),
+					show_min_max = TRUE
+				)			
+			),
+			`Admission percentage women` = colDef(
+				show=TRUE,
+	            cell = gauge_chart(
+					data = all_colleges_admissions_df,
+					number_fmt = scales::comma,
+					fill_color = rev(fill_color_scheme),
+					show_min_max = TRUE
+				)			
+			),
+			`Admission percentage men` = colDef(
+				show=TRUE,
+	            cell = gauge_chart(
+					data = all_colleges_admissions_df,
+					number_fmt = scales::comma,
+					fill_color = rev(fill_color_scheme),
+					show_min_max = TRUE
+				)			
+			),
+			UNITID = colDef(show=FALSE),
+			State = colDef(
+				show=TRUE,
+				cell = function(value) {
+      				state.abb[match(value,state.name)]
+    			}
+			)
+		)
+    )
+
+```
+
+### Demographics
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE, asis=TRUE}
+
+
+all_colleges_demographics |> reactable(
+        defaultColDef = colDef(
+            align = 'left',
+            cell = gauge_chart(
+                data = all_colleges_demographics_df,
+                number_fmt = scales::comma,
+				fill_color = "black",
+				show_min_max = TRUE,
+				max_value = 100,
+				min_value = 0
+            )
+        ),
+		columns = list(
+			Institution = colDef(html = TRUE, show=TRUE, sticky="left", cell = 
+				JS('
+					function(cellInfo) {
+						// Render as a link
+						const url = `${cellInfo.row["UNITID"]}.html`
+						return `<a href="${url}" target="_blank">${cellInfo.value}</a>`
+					}
+				')
+			),
+			`Freshman diversity index` = colDef(
+				show=TRUE,
+	            cell = gauge_chart(
+					data = all_colleges_demographics_df,
+					number_fmt = scales::comma,
+					fill_color = fill_color_scheme,
+					show_min_max = TRUE,
+					max_value = 100,
+					min_value = 0
+				)			
+			),
+			`Tenure-stream diversity index` = colDef(
+				show=TRUE,
+	            cell = gauge_chart(
+					data = all_colleges_demographics_df,
+					number_fmt = scales::comma,
+					fill_color = fill_color_scheme,
+					show_min_max = TRUE,
+					max_value = 100,
+					min_value = 0
+				)			
+			),
+			`NTT diversity index` = colDef(
+				show=TRUE,
+	            cell = gauge_chart(
+					data = all_colleges_demographics_df,
+					number_fmt = scales::comma,
+					fill_color = fill_color_scheme,
+					show_min_max = TRUE,
+					max_value = 100,
+					min_value = 0
+				)			
+			),
+			UNITID = colDef(show=FALSE)
+		)
+    )
+```
+
+### General
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE, asis=TRUE}
+color_scheme_agnostic <- RColorBrewer::brewer.pal(9, "PuOr")
+
+all_colleges_general |> reactable(
+		columns = list(
+			Institution = colDef(html = TRUE, show=TRUE, sticky="left", cell = 
+				JS('
+					function(cellInfo) {
+						// Render as a link
+						const url = `${cellInfo.row["UNITID"]}.html`
+						return `<a href="${url}" target="_blank">${cellInfo.value}</a>`
+					}
+				')
+			),
+			UNITID = colDef(show=FALSE)
+		)
+    )
+
+```
+
+
+# Filter based on college or location traits.
+
+
+## Location
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE, asis=TRUE}
+
+
+crosstalk::filter_select("State", "State", all_colleges, ~State)
+
+crosstalk::filter_select("City", "City", all_colleges, ~City)
+
+crosstalk::filter_checkbox("AbortionAvail", "Abortion availability", all_colleges, ~`Abortion availability`)
+
+crosstalk::filter_checkbox("TransSafety", "Anti-trans legislative risk", all_colleges, ~`Anti-trans legislative risk`)
+
+
+crosstalk::filter_slider("contraceptionsupport", "State rep support for contraception", all_colleges, "percentcontraceptivesupport")
+
+crosstalk::filter_slider("interracialsamesex", "State rep support for interracial and same-sex marriage", all_colleges, "interracialsamesexmarriage")
+
+crosstalk::filter_select("biome", "Biome", all_colleges, ~`Biome`)
+
+crosstalk::filter_slider("milestomountains", "Miles to mountains", all_colleges, "Miles to mountains", max=500)
+
+```	
+
+## College traits
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE, asis=TRUE}
+
+crosstalk::filter_select("athleticconference", "Athletic conference", all_colleges, ~`Athletic conference`)
+
+crosstalk::filter_slider("price", "Average net price", all_colleges, "netprice", min = 0, step = 1000)
+
+crosstalk::filter_slider("gradratesixyearslider", "Graduation rate (six years)", all_colleges, "gradratesixyear")
+
+crosstalk::filter_checkbox("HCBU", "HBCU", all_colleges, ~`HBCU`)
+
+crosstalk::filter_checkbox("Tribal", "Tribal College", all_colleges, ~`Tribal College`)
+
+crosstalk::filter_checkbox("Category", "Institution category", all_colleges, ~`Category`)
+
+crosstalk::filter_checkbox("SizeSetting", "Size and setting", all_colleges, ~`Size and setting`)
+
+crosstalk::filter_checkbox("EnrollmentProfile", "Enrollment profile", all_colleges, ~`Enrollment profile`)
+
+crosstalk::filter_checkbox("type", "Institution type", all_colleges, ~`Overall type`)
+
+crosstalk::filter_checkbox("enrollment", "Full-time undergrad enrollment trend", all_colleges, ~`Full-time undergrad enrollment trend`)
+
+```	
+
+## Freshmen demographics
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE, asis=TRUE}
+
+
+crosstalk::filter_slider("percentwomen", "Percent of women in freshman class", all_colleges, "percentfreshmenwomen")
+
+crosstalk::filter_slider("percentwhite", "Percent of white students in freshman class", all_colleges, "percentfreshmenwhite")
+
+crosstalk::filter_slider("percentblack", "Percent of black students in freshman class", all_colleges, "percentfreshmenblack")
+
+crosstalk::filter_slider("percentasian", "Percent of Asian students in freshman class", all_colleges, "percentfreshmenasian")
+
+crosstalk::filter_slider("percentamericanindian", "Percent of American Indian students in freshman class", all_colleges, "percentfreshmenamericanindian")
+
+crosstalk::filter_slider("percentpacificislander", "Percent of Pacific Islander students in freshman class", all_colleges, "percentfreshmenpacificislander")
+
+```
+
+
+# Map
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=FALSE}
+leaflet(all_colleges) %>%
+  addTiles() %>%  
+  setView(lng = -110, lat = 48, zoom = 3) %>%
+  addCircleMarkers(data = all_colleges, lng = ~Longitude, lat = ~Latitude, popup = ~PopupLabel, radius=3, fillOpacity=0.5)
+
+  #addMarkers(data = all_colleges, lng = ~Longitude, lat = ~Latitude, popup = ~PopupLabel, clusterOptions = markerClusterOptions())
+```

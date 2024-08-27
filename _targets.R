@@ -28,9 +28,10 @@ list(
  tar_target(db_from_access, CreateDBFromAccess()),
  tar_target(college_chosen_comparison_table, CreateComparisonNetwork(db_from_access, comparison_table)),
  tar_target(maxcount, Inf),
+ tar_target(exclude_no_degrees, TRUE), # exclude institutions that do not grant degrees
  tar_target(ipeds_directly, GetIPEDSDirectly()),
  tar_target(ipeds_direct_and_db, AggregateDirectIPEDSDirect(ipeds_directly)),
- tar_target(comparison_table_core, CreateComparisonTables(ipeds_direct_and_db)),
+ tar_target(comparison_table_core, CreateComparisonTables(ipeds_direct_and_db, exclude_no_degrees)),
  tar_target(comparison_table_mountain, AppendDistanceToMountains(comparison_table_core)),
  tar_target(comparison_table_slow_updating, AppendVaccination(AppendCATravelBan(AppendAAUPCensure(comparison_table_mountain)))),
  tar_target(population_by_state_by_age, GetStatePopulationByAge()),
@@ -47,18 +48,22 @@ list(
  tar_target(institution_rmd, command="_institution.Rmd", format="file"),
  tar_target(comparison_table_live, FilterComparisonTableForLive(comparison_table)),
  
-#  tar_target(pages_new, RenderSingleInstitutionPage(institution_unitid='166027', comparison_table=comparison_table_live, fields_and_majors=fields_and_majors, maxcount=maxcount, CIPS_codes=CIPS_codes, weatherspark=weatherspark, yml=yml, index_table=index_table, life_expectancy=life_expectancy, population_by_state_by_age=population_by_state_by_age, institution_rmd=institution_rmd, institution_rmd_path="_institution_new.Rmd", college_chosen_comparison_table=college_chosen_comparison_table)) ,# for debugging changes
+ #tar_target(pages_new, RenderSingleInstitutionPage(institution_unitid='166027', comparison_table=comparison_table_live, fields_and_majors=fields_and_majors, maxcount=maxcount, CIPS_codes=CIPS_codes, weatherspark=weatherspark, yml=yml, index_table=index_table, life_expectancy=life_expectancy, population_by_state_by_age=population_by_state_by_age, institution_rmd=institution_rmd, institution_rmd_path="_institution_new.Rmd", college_chosen_comparison_table=college_chosen_comparison_table)) ,# for debugging changes
  
- tar_target(
-	pages_new, 
-	RenderSingleInstitutionPage(institution_unitid, comparison_table=comparison_table_live, fields_and_majors=fields_and_majors, maxcount=maxcount, CIPS_codes=CIPS_codes, weatherspark=weatherspark, yml=yml, index_table=index_table, life_expectancy=life_expectancy, population_by_state_by_age=population_by_state_by_age, institution_rmd=institution_rmd, college_chosen_comparison_table=college_chosen_comparison_table),
-	pattern=map(institution_unitid)
- ),
+ 
+ tar_target(pages_comparison, RenderInstitutionPagesComparison(comparison_table, fields_and_majors, maxcount=40, CIPS_codes, yml, index_table, population_by_state_by_age, college_chosen_comparison_table)),
+
+#  tar_target(
+# 	pages_new, 
+# 	RenderSingleInstitutionPage(institution_unitid, comparison_table=comparison_table_live, fields_and_majors=fields_and_majors, maxcount=maxcount, CIPS_codes=CIPS_codes, weatherspark=weatherspark, yml=yml, index_table=index_table, life_expectancy=life_expectancy, population_by_state_by_age=population_by_state_by_age, institution_rmd=institution_rmd, college_chosen_comparison_table=college_chosen_comparison_table),
+# 	pattern=map(institution_unitid)
+#  ),
 
  tar_target(CIPS_codes, GetCIPCodesExplanations()),
  tar_target(yml, CreateYMLForSite(CIPS_codes)),
  tar_target(field_pages, RenderFieldPages(CIPS_codes, fields_and_majors, yml)),
  tar_target(majors, RenderMajorsPages(fields_and_majors, CIPS_codes, yml, maxcount)),
- tar_target(index_et_al, RenderIndexPageEtAl(pages_new, index_table, yml, CIPS_codes, comparison_table, fields_and_majors))
+ tar_target(field_data, GetFieldData(fields_and_majors)),
+ tar_target(index_et_al, RenderIndexPageEtAl(pages_new, index_table, yml, CIPS_codes, comparison_table, fields_and_majors, field_data))
 
 )

@@ -1,0 +1,178 @@
+---
+output:
+  rmdformats::readthedown:
+    self_contained: false
+    includes:
+      in_header: GA_Script.html
+params:
+  institution_name: "nothing"
+  institution_long_name: "nothing"
+  institution_id: "nothing"
+  comparison_table: "nothing"
+  spark_width: 200
+  spark_height: 60
+  index_table: "index_table"
+  life_expectancy: "nothing"
+  population_by_state_by_age: "nothing"
+  college_chosen_comparison_table: "nothing"
+title: "`r paste0(params$institution_name)`"
+
+---
+
+```{css, echo=FALSE}
+img {
+  max-width: 100%;
+}
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
+knitr::opts_chunk$set(dev="png", echo=FALSE, message=FALSE, warning=FALSE, error=FALSE)
+source("_packages.R")
+source("R/functions.R")
+index_table <- params$index_table
+comparison_table <- params$comparison_table
+comparison_table <- comparison_table[order(comparison_table$`IPEDS Year`, decreasing=TRUE),]
+population_by_state_by_age <- params$population_by_state_by_age
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
+```
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
+#`UNITID Unique identification number of the institution`
+most_current_info <- NULL
+
+try({
+	
+	harvard_price <- FirstNaOmit(subset(comparison_table, comparison_table$`UNITID Unique identification number of the institution`=="166027")$`Average net price students awarded grant or scholarship aid`)
+
+	
+	index_focal_vector <- subset(index_table, index_table$UNITID==params$institution_id)
+	college_chosen_comparison_vector <- subset(college_chosen_comparison_table, college_chosen_comparison_table$`focal`==params$institution_id)
+	
+	to_institutions <- strsplit(college_chosen_comparison_vector$`to_all`, ", ")[[1]]
+	from_institutions <- strsplit(college_chosen_comparison_vector$`from_all`, ", ")[[1]]
+	NCES_comparison_institutions <- strsplit(college_chosen_comparison_vector$`NCES_comparison_group_members`, ", ")[[1]]
+	
+	index_table$pseudoranking_difference <- abs(as.numeric(index_table$`pseudoranking`)-as.numeric(index_focal_vector$`pseudoranking`))
+	index_table$pseudoranking_difference[index_table$UNITID==params$institution_id] <- -10000 # so the focal institution is always first
+	
+	
+	index_table <- index_table[base::order(index_table$pseudoranking_difference),]
+	
+	any_comparison <- unique(c(to_institutions, from_institutions, NCES_comparison_institutions, params$institution_id))
+	
+	index_table <- subset(index_table, index_table$UNITID %in% any_comparison)
+	
+	index_table$Comparison <- ""
+
+	index_table$Comparison[index_table$UNITID %in% to_institutions] <- "→"
+	
+	index_table$Comparison[index_table$UNITID %in% from_institutions] <- paste0(index_table$Comparison[index_table$UNITID %in% from_institutions], "←")
+	
+	index_table$Comparison <- gsub("→←", "↔", index_table$Comparison)
+	
+
+	focal_institutions_table <- subset(comparison_table, comparison_table$`UNITID Unique identification number of the institution` %in% index_table$UNITID)
+	
+	
+	focal_institutions_table <- focal_institutions_table[order(focal_institutions_table$`IPEDS Year`, decreasing=TRUE),]
+	
+	focal_institutions_table$Location <- paste0(focal_institutions_table$`City location of institution`, ", ", focal_institutions_table$`State`)
+	
+	conversion_table <- read.csv("data/ConversionToComparisonCharts.csv")
+	
+	final_summary <- data.frame(matrix("", nrow=nrow(conversion_table), ncol=2+nrow(index_table)))
+	
+	colnames(final_summary) <- c("Category", "Measure", gsub("University", "U.", index_table$`Institution`))
+	
+	final_summary[,1] <- conversion_table$Category
+	final_summary[,2] <- conversion_table$Rename
+	
+	for(col_index in 2+sequence(ncol(final_summary))) {
+		UNITID_chosen <- index_table$UNITID[col_index-2]
+		focal_school_info <- subset(focal_institutions_table, focal_institutions_table$`UNITID Unique identification number of the institution`==UNITID_chosen)
+		for (row_index in sequence(nrow(final_summary))) {
+			try({
+				focal_field <- conversion_table$ColumnName[row_index]
+				focal_units <- conversion_table$Units[row_index]
+				final_summary[row_index, col_index] <- FirstNaOmit(focal_school_info[,focal_field])	
+
+				if(nchar(focal_units)>0) {
+					linear_fit_data <- focal_school_info[,c("IPEDS Year", focal_field)]
+					colnames(linear_fit_data) <- c("Year", "Dependent")
+					linear_fit_data$Year <- as.numeric(linear_fit_data$Year)
+					linear_fit_data$Dependent <- as.numeric(linear_fit_data$Dependent)
+					fit <- stats::lm(Dependent ~ Year, data=linear_fit_data)
+					if(summary(fit)$coefficients[2,4]<0.05) { # a significant trend; not correcting for multiple comparisons, just getting an heuristic on changes over time
+						change_symbol <- '↑'
+						if(sign(summary(fit)$coefficients[2,1])<0) {
+							change_symbol <- '↓'
+						}
+						slope <- summary(fit)$coefficients[2,1] 
+						if(focal_units=="Dollars") {
+							slope <- paste0(ifelse(sign(slope)<0, "-", ""), '$', formatMe(abs(slope),0))
+						} else if (focal_units=="Percent") {
+							slope <- paste0(abs(formatMe(slope,2)), '%')
+						} else {
+							slope <- formatMe(slope,0)
+						}
+
+						final_summary[row_index, col_index]  <- paste0(final_summary[row_index, col_index], " ", change_symbol, "<br />",  slope, ' per year')
+					}
+					# do slope
+				} else {
+					final_summary[row_index, col_index] <- FirstNaOmit(focal_school_info[,focal_field])	
+					if(col_index>3) {
+						if(final_summary[row_index, col_index]==final_summary[row_index, 3]) {
+							#final_summary[row_index, col_index] <- "Same"
+							final_summary[row_index, col_index] <- paste0('<span style="color:Gainsboro;">', final_summary[row_index, col_index], '</span>')
+						}
+					}
+				}
+			}, silent=TRUE)
+		}	
+	}
+	
+	
+	sticky_names <- c("Category", "Measure", colnames(final_summary)[3])
+
+	column_formats <- setNames(
+	list(
+		colDef(sticky="left"),
+		colDef(sticky="left"),
+		colDef(sticky="left")
+	), 
+	sticky_names
+	)
+
+reactable(final_summary, 
+  defaultColDef = colDef(
+    minWidth = 150
+  ),
+  columns = column_formats, 
+  compact = TRUE, 
+  striped=TRUE,   
+  groupBy = "Category",
+  defaultPageSize = 200
+)
+	
+	
+}, silent=TRUE)
+```
+
+dt 5
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
+final_summary %>%
+  DT::datatable(
+    selection = 'none', 
+	rownames = '', 
+	filter = 'none',
+	extensions = "FixedColumns",
+	options = list(
+	  fixedColumns = list(leftColumns = 4)
+    )
+
+  )
