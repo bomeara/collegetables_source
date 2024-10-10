@@ -35,7 +35,7 @@ list(
  tar_target(comparison_table_mountain, AppendDistanceToMountains(comparison_table_core)),
  tar_target(comparison_table_slow_updating, AppendVaccination(AppendCATravelBan(AppendAAUPCensure(comparison_table_mountain)))),
  tar_target(population_by_state_by_age, GetStatePopulationByAge()),
- tar_target(comparison_table_prefilter, ReorderComparisonTable(AppendDiversityMetrics(AppendSourcesOfStudents(AppendTransRisk(AppendBiome(AppendAbortion(AppendGunLaws(AppendMarriageRespect(AppendContraceptiveSupport(comparison_table_slow_updating)))))))))),
+ tar_target(comparison_table_prefilter, ReorderComparisonTable(AppendPercentageFreshmenByState(AppendDiversityMetrics(AppendSourcesOfStudents(AppendTransRisk(AppendBiome(AppendAbortion(AppendGunLaws(AppendMarriageRespect(AppendContraceptiveSupport(comparison_table_slow_updating))))))))))),
  tar_target(comparison_table, PersonalFilter(comparison_table_prefilter)),
  tar_target(index_table, CreateIndexTable(comparison_table)),
  tar_target(weatherspark, GetWeathersparkLinks()),
@@ -47,11 +47,15 @@ list(
  tar_target(institution_unitid, unique(comparison_table$`UNITID Unique identification number of the institution`)),
  tar_target(institution_rmd, command="_institution.Rmd", format="file"),
  tar_target(comparison_table_live, FilterComparisonTableForLive(comparison_table)),
+ tar_target(scorecard_field, GetFieldOfStudyScorecardData()),
+ tar_target(scorecard_college, GetInstitutionScorecardData()),
+ tar_target(scorecard_field_aggregated, AggregateScorecard(scorecard_field)),
+ tar_target(scorecard_field_organized, OrganizeScorecardField(scorecard_field)),
  
  #tar_target(pages_new, RenderSingleInstitutionPage(institution_unitid='166027', comparison_table=comparison_table_live, fields_and_majors=fields_and_majors, maxcount=maxcount, CIPS_codes=CIPS_codes, weatherspark=weatherspark, yml=yml, index_table=index_table, life_expectancy=life_expectancy, population_by_state_by_age=population_by_state_by_age, institution_rmd=institution_rmd, institution_rmd_path="_institution_new.Rmd", college_chosen_comparison_table=college_chosen_comparison_table)) ,# for debugging changes
  
  
- tar_target(pages_comparison, RenderInstitutionPagesComparison(comparison_table, fields_and_majors, maxcount=40, CIPS_codes, yml, index_table, population_by_state_by_age, college_chosen_comparison_table)),
+ tar_target(pages_new, RenderInstitutionPagesComparison(comparison_table, fields_and_majors, maxcount=Inf, CIPS_codes, yml, index_table, population_by_state_by_age, college_chosen_comparison_table, scorecard_field_organized)),
 
 #  tar_target(
 # 	pages_new, 
@@ -64,6 +68,6 @@ list(
  tar_target(field_pages, RenderFieldPages(CIPS_codes, fields_and_majors, yml)),
  tar_target(majors, RenderMajorsPages(fields_and_majors, CIPS_codes, yml, maxcount)),
  tar_target(field_data, GetFieldData(fields_and_majors)),
- tar_target(index_et_al, RenderIndexPageEtAl(pages_new, index_table, yml, CIPS_codes, comparison_table, fields_and_majors, field_data))
+ tar_target(index_et_al, RenderIndexPageEtAl(pages_new, index_table, yml, CIPS_codes, comparison_table, fields_and_majors, field_data, scorecard_field_aggregated))
 
 )

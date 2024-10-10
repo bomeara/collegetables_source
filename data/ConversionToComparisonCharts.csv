@@ -3,16 +3,18 @@ Location,Location,Geography,,
 Sector of institution,Sector,General,,
 Level of institution,Level,General,,
 Historically Black College or University,HBCU,General,,
-Tribal college,HBCU,General,,
-Carnegie Classification 2021 Basic,Basic classification,General,,
+Tribal college,Tribal College,General,,
+Carnegie Classification 2021 Size and Setting,Size and setting,General,,
+Carnegie Classification 2021 Undergraduate Profile,Undergrad profile,General,,
 Carnegie Classification 2021 Undergraduate Instructional Program,Undergrad instruction,General,,
 Carnegie Classification 2021 Graduate Instructional Program,Grad instruction,General,,
-Carnegie Classification 2021 Undergraduate Profile,Undergrad profile,General,,
 Carnegie Classification 2021 Enrollment Profile,Enrollment profile,General,,
-Carnegie Classification 2021 Size and Setting,Size and setting,General,,
-AAUP_Censure,Under censure by AAUP,General,,
-Gun Law Stringency,Gun Law Stringency,General,,
-Abortion,Abortion access,General,,
+Gun Law Stringency,Gun Law Stringency,Geography,,
+Abortion,Abortion access,Geography,,
+Proportion of reps voting in favor of respect for marriage act,State rep support for same sex and mixed race marriage,Geography,Percent,
+Proportion of reps voting in favor of respect for right to contraception act,State rep support for contraception,Geography,Percent,
+Trans Risk,Risk to trans adults,Geography,,
+MilesToMountains,Miles to mountains,Geography,Number,
 biome,Biome,Geography,,
 Undergrad full time,Undergrads (full time),Enrollment,Number,None
 Undergrad part time,Undergrads (part time),Enrollment,Number,None
@@ -70,52 +72,114 @@ Graduation Rate Bachelors in within 150 percent of normal time Two or more races
 Graduation Rate Bachelors in within 150 percent of normal time Two or more races women,Two or more races women,Graduation,Percent,Higher
 Graduation Rate Bachelors in within 150 percent of normal time Nonresident alien men,Nonresident alien men,Graduation,Percent,Higher
 Graduation Rate Bachelors in within 150 percent of normal time Nonresident alien women,Nonresident alien women,Graduation,Percent,Higher
-Tenure-stream Grand total,Total (tenure-track count),Tenure stream faculty,Number,None
-Tenure-stream Grand total women,Women (tenure-track count),Tenure stream faculty,Number,None
-Tenure-stream Grand total men,Men (tenure-track count),Tenure stream faculty,Number,None
-Tenure-stream American Indian or Alaska Native,American Indian or Alaska Native (tenure-track count),Tenure stream faculty,Number,None
-Tenure-stream Asian,Asian (tenure-track count),Tenure stream faculty,Number,None
-Tenure-stream Black or African American,Black or African American (tenure-track count),Tenure stream faculty,Number,None
-Tenure-stream Hispanic or Latino,Hispanic or Latino (tenure-track count),Tenure stream faculty,Number,None
-Tenure-stream Native Hawaiian or Other Pacific Islander,Native Hawaiian or other Pacific Islander (tenure-track count),Tenure stream faculty,Number,None
-Tenure-stream White,White (tenure-track count),Tenure stream faculty,Number,None
-Tenure-stream Two or more races,Two or more races (tenure-track count),Tenure stream faculty,Number,None
-Tenure-stream Nonresident alien,Nonresident alien (tenure-track count),Tenure stream faculty,Number,None
-NTT-stream Grand total,Total (non-tenure-track count),Non-tenure stream faculty,Number,None
-NTT-stream Grand total women,Women (non-tenure-track count),Non-tenure stream faculty,Number,None
-NTT-stream Grand total men,Men (non-tenure-track count),Non-tenure stream faculty,Number,None
-NTT-stream American Indian or Alaska Native,American Indian or Alaska Native (non-tenure-track count),Non-tenure stream faculty,Number,None
-NTT-stream Asian,Asian (non-tenure-track count),Non-tenure stream faculty,Number,None
-NTT-stream Black or African American,Black or African American (non-tenure-track count),Non-tenure stream faculty,Number,None
-NTT-stream Hispanic or Latino,Hispanic or Latino (non-tenure-track count),Non-tenure stream faculty,Number,None
-NTT-stream Native Hawaiian or Other Pacific Islander,Native Hawaiian or other Pacific Islander (non-tenure-track count),Non-tenure stream faculty,Number,None
-NTT-stream White,White (non-tenure-track count),Non-tenure stream faculty,Number,None
-NTT-stream Two or more races,Two or more races (non-tenure-track count),Non-tenure stream faculty,Number,None
-NTT-stream Nonresident alien,Nonresident alien (non-tenure-track count),Non-tenure stream faculty,Number,None
-FirstYearFullTimeDegreeSeekingUndergrads Grand total men percent,Men (percent freshmen),Freshmen,Percent,None
-FirstYearFullTimeDegreeSeekingUndergrads Grand total women percent,Women (percent freshmen),Freshmen,Percent,None
-FirstYearFullTimeDegreeSeekingUndergrads American Indian or Alaska Native men percent,American Indian or Alaska Native men (percent freshmen),Freshmen,Percent,None
-FirstYearFullTimeDegreeSeekingUndergrads American Indian or Alaska Native women percent,American Indian or Alaska Native women (percent freshmen),Freshmen,Percent,None
-FirstYearFullTimeDegreeSeekingUndergrads Asian men percent,Asian men (percent freshmen),Freshmen,Percent,None
-FirstYearFullTimeDegreeSeekingUndergrads Asian women percent,Asian women (percent freshmen),Freshmen,Percent,None
-FirstYearFullTimeDegreeSeekingUndergrads Black or African American men percent,Black or African American men (percent freshmen),Freshmen,Percent,None
-FirstYearFullTimeDegreeSeekingUndergrads Black or African American women percent,Black or African American women (percent freshmen),Freshmen,Percent,None
-FirstYearFullTimeDegreeSeekingUndergrads Hispanic men percent,Hispanic men (percent freshmen),Freshmen,Percent,None
-FirstYearFullTimeDegreeSeekingUndergrads Hispanic women percent,Hispanic women (percent freshmen),Freshmen,Percent,None
-FirstYearFullTimeDegreeSeekingUndergrads Native Hawaiian or Other Pacific Islander men percent,Native Hawaiian or Other Pacific Islander men (percent freshmen),Freshmen,Percent,None
-FirstYearFullTimeDegreeSeekingUndergrads Native Hawaiian or Other Pacific Islander women percent,Native Hawaiian or Other Pacific Islander women (percent freshmen),Freshmen,Percent,None
-FirstYearFullTimeDegreeSeekingUndergrads White men percent,White men (percent freshmen),Freshmen,Percent,None
-FirstYearFullTimeDegreeSeekingUndergrads White women percent,White women (percent freshmen),Freshmen,Percent,None
-FirstYearFullTimeDegreeSeekingUndergrads Two or more races men percent,Two or more races men (percent freshmen),Freshmen,Percent,None
-FirstYearFullTimeDegreeSeekingUndergrads Two or more races women percent,Two or more races women (percent freshmen),Freshmen,Percent,None
-FirstYearFullTimeDegreeSeekingUndergrads Race ethnicity unknown men percent,Race ethnicity unknown men (percent freshmen),Freshmen,Percent,None
-FirstYearFullTimeDegreeSeekingUndergrads Race ethnicity unknown women percent,Race ethnicity unknown women (percent freshmen),Freshmen,Percent,None
-FirstYearFullTimeDegreeSeekingUndergrads Nonresident alien men percent,Nonresident alien men (percent freshmen),Freshmen,Percent,None
-FirstYearFullTimeDegreeSeekingUndergrads Nonresident alien women percent,Nonresident alien women (percent freshmen),Freshmen,Percent,None
+Tenure-stream Grand total,Total,Tenure stream faculty,Number,None
+Tenure-stream Grand total women,Women,Tenure stream faculty,Number,None
+Tenure-stream Grand total men,Men,Tenure stream faculty,Number,None
+Tenure-stream American Indian or Alaska Native,American Indian or Alaska Native,Tenure stream faculty,Number,None
+Tenure-stream Asian,Asian,Tenure stream faculty,Number,None
+Tenure-stream Black or African American,Black or African American,Tenure stream faculty,Number,None
+Tenure-stream Hispanic or Latino,Hispanic or Latino,Tenure stream faculty,Number,None
+Tenure-stream Native Hawaiian or Other Pacific Islander,Native Hawaiian or other Pacific Islander,Tenure stream faculty,Number,None
+Tenure-stream White,White,Tenure stream faculty,Number,None
+Tenure-stream Two or more races,Two or more races,Tenure stream faculty,Number,None
+Tenure-stream Nonresident alien,Nonresident alien,Tenure stream faculty,Number,None
+NTT-stream Grand total,Total,Non-tenure stream faculty,Number,None
+NTT-stream Grand total women,Women,Non-tenure stream faculty,Number,None
+NTT-stream Grand total men,Men,Non-tenure stream faculty,Number,None
+NTT-stream American Indian or Alaska Native,American Indian or Alaska Native,Non-tenure stream faculty,Number,None
+NTT-stream Asian,Asian,Non-tenure stream faculty,Number,None
+NTT-stream Black or African American,Black or African American,Non-tenure stream faculty,Number,None
+NTT-stream Hispanic or Latino,Hispanic or Latino,Non-tenure stream faculty,Number,None
+NTT-stream Native Hawaiian or Other Pacific Islander,Native Hawaiian or other Pacific Islander,Non-tenure stream faculty,Number,None
+NTT-stream White,White,Non-tenure stream faculty,Number,None
+NTT-stream Two or more races,Two or more races,Non-tenure stream faculty,Number,None
+NTT-stream Nonresident alien,Nonresident alien,Non-tenure stream faculty,Number,None
+FirstYearFullTimeDegreeSeekingUndergrads Grand total men percent,Men,Freshmen,Percent,None
+FirstYearFullTimeDegreeSeekingUndergrads Grand total women percent,Women,Freshmen,Percent,None
+FirstYearFullTimeDegreeSeekingUndergrads American Indian or Alaska Native men percent,American Indian or Alaska Native men,Freshmen,Percent,None
+FirstYearFullTimeDegreeSeekingUndergrads American Indian or Alaska Native women percent,American Indian or Alaska Native women,Freshmen,Percent,None
+FirstYearFullTimeDegreeSeekingUndergrads Asian men percent,Asian men,Freshmen,Percent,None
+FirstYearFullTimeDegreeSeekingUndergrads Asian women percent,Asian women,Freshmen,Percent,None
+FirstYearFullTimeDegreeSeekingUndergrads Black or African American men percent,Black or African American men,Freshmen,Percent,None
+FirstYearFullTimeDegreeSeekingUndergrads Black or African American women percent,Black or African American women,Freshmen,Percent,None
+FirstYearFullTimeDegreeSeekingUndergrads Hispanic men percent,Hispanic men,Freshmen,Percent,None
+FirstYearFullTimeDegreeSeekingUndergrads Hispanic women percent,Hispanic women,Freshmen,Percent,None
+FirstYearFullTimeDegreeSeekingUndergrads Native Hawaiian or Other Pacific Islander men percent,Native Hawaiian or Other Pacific Islander men,Freshmen,Percent,None
+FirstYearFullTimeDegreeSeekingUndergrads Native Hawaiian or Other Pacific Islander women percent,Native Hawaiian or Other Pacific Islander women,Freshmen,Percent,None
+FirstYearFullTimeDegreeSeekingUndergrads White men percent,White men,Freshmen,Percent,None
+FirstYearFullTimeDegreeSeekingUndergrads White women percent,White women,Freshmen,Percent,None
+FirstYearFullTimeDegreeSeekingUndergrads Two or more races men percent,Two or more races men,Freshmen,Percent,None
+FirstYearFullTimeDegreeSeekingUndergrads Two or more races women percent,Two or more races women,Freshmen,Percent,None
+FirstYearFullTimeDegreeSeekingUndergrads Race ethnicity unknown men percent,Race ethnicity unknown men,Freshmen,Percent,None
+FirstYearFullTimeDegreeSeekingUndergrads Race ethnicity unknown women percent,Race ethnicity unknown women,Freshmen,Percent,None
+FirstYearFullTimeDegreeSeekingUndergrads Nonresident alien men percent,Nonresident alien men,Freshmen,Percent,None
+FirstYearFullTimeDegreeSeekingUndergrads Nonresident alien women percent,Nonresident alien women,Freshmen,Percent,None
 Disability percentage numeric,Percent of undergrads with registered disabilities (≤3 is rounded up to 3),Student conditions,Percent,None
-Percent first year students from in state,In state,First year student percentages,Percent,None
-Percent first year students from US,US,First year student percentages,Percent,None
+Percent Percentage of enrolled first years who are from in state,In state,First year student percentages,Percent,None
+Percent Percentage of enrolled first years who are from US,US,First year student percentages,Percent,None
 Percent first year students residence not reported,Not reported,First year student percentages,Percent,None
 FirstYearFullTimeDegreeSeekingUndergrads Diversity Index,Freshman diversity,Diversity,Percent,Higher
 Tenure-stream Diversity Index,Tenure-stream diversity,Diversity,Percent,Higher
-NTT-stream Diversity Index,NTT diversity,Diversity,Percent,Higher
+NTT-stream Diversity Index,Non-tenure-track diversity,Diversity,Percent,Higher
+Percentage of enrolled first years who are from Alabama,Alabama,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Alaska,Alaska,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Arizona,Arizona,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Arkansas,Arkansas,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from California,California,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Colorado,Colorado,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Connecticut,Connecticut,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Delaware,Delaware,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from District of Columbia,District of Columbia,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Florida,Florida,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Georgia,Georgia,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Hawaii,Hawaii,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Idaho,Idaho,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Illinois,Illinois,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Indiana,Indiana,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Iowa,Iowa,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Kansas,Kansas,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Kentucky,Kentucky,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Louisiana,Louisiana,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Maine,Maine,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Maryland,Maryland,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Massachusetts,Massachusetts,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Michigan,Michigan,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Minnesota,Minnesota,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Mississippi,Mississippi,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Missouri,Missouri,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Montana,Montana,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Nebraska,Nebraska,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Nevada,Nevada,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from New Hampshire,New Hampshire,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from New Jersey,New Jersey,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from New Mexico,New Mexico,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from New York,New York,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from North Carolina,North Carolina,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from North Dakota,North Dakota,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Ohio,Ohio,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Oklahoma,Oklahoma,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Oregon,Oregon,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Outlying areas total,Outlying areas total,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Pennsylvania,Pennsylvania,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Puerto Rico,Puerto Rico,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Rhode Island,Rhode Island,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from South Carolina,South Carolina,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from South Dakota,South Dakota,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Tennessee,Tennessee,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Texas,Texas,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Utah,Utah,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Vermont,Vermont,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Virginia,Virginia,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Washington,Washington,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from West Virginia,West Virginia,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Wisconsin,Wisconsin,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Wyoming,Wyoming,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Virgin Islands,Virgin Islands,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Northern Marianas,Northern Marianas,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Guam,Guam,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from American Samoa,American Samoa,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Marshall Islands,Marshall Islands,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Federated States of Micronesia,Federated States of Micronesia,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Palau,Palau,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Foreign countries,Foreign countries,IncomingStatesCounts,Percent,
+Percentage of enrolled first years who are from Residence not reported,Residence not reported,IncomingStatesCounts,Percent,

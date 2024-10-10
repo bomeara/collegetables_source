@@ -334,10 +334,10 @@ CreateComparisonTables <- function(ipeds_direct_and_db, exclude_no_degrees=TRUE)
 	
 	comparison_table <- dplyr::left_join(comparison_table, enrollment_residence_wider, by=c("UNITID.Unique.identification.number.of.the.institution", "IPEDS.Year"))
 	
-	pops_by_state <- GetPopulationByStateAtAge18()
-	for(state_index in sequence(nrow((pops_by_state)))) {
-		comparison_table[,paste0("Percentage of 18 yo from ", pops_by_state[state_index,'State'])] <- 100*as.numeric(comparison_table[,paste0("First year students from ", pops_by_state[state_index,'State'])])/as.numeric(pops_by_state[state_index,'Population'])
-	}
+	# pops_by_state <- GetPopulationByStateAtAge18()
+	# for(state_index in sequence(nrow((pops_by_state)))) {
+	# 	comparison_table[,paste0("Percentage of 18 yo from ", pops_by_state[state_index,'State'])] <- 100*as.numeric(comparison_table[,paste0("First year students from ", pops_by_state[state_index,'State'])])/as.numeric(pops_by_state[state_index,'Population'])
+	# }
 	
 
 	
@@ -1046,6 +1046,16 @@ AppendVaccinationOld <- function(college_data) {
 	return(college_data)
 }
 
+AppendPercentageFreshmenByState <- function(comparison_table) {
+	cols_with_counts_from <- colnames(comparison_table)[grepl("First year students from ", colnames(comparison_table))]
+	cols_with_counts_from <- cols_with_counts_from[!grepl("anywhere|Outlying|Residence|US", cols_with_counts_from)]
+	comparison_table[,paste0("Total first year students")] <- rowSums(sapply(comparison_table[,cols_with_counts_from], as.numeric))
+	for(col_index in sequence(length(cols_with_counts_from))) {
+		comparison_table[,paste0("Percentage of enrolled first years who are from ", gsub("First year students from ", "", cols_with_counts_from[col_index]))] <- 100*as.numeric(comparison_table[,cols_with_counts_from[col_index]])/as.numeric(comparison_table[,"Total first year students"])
+	}
+	return(comparison_table)	
+}
+
 AppendVaccination <- function(comparison_table) {
 	print("Appending vaccination data")
 	vaccination <- read.csv("external_data/data-7G1ie.csv", header=TRUE) # From the Chronicle of Higher Education
@@ -1560,8 +1570,8 @@ RenderInstitutionPagesNew <- function(comparison_table, fields_and_majors, maxco
 }
 
 
-RenderInstitutionPagesComparison <- function(comparison_table, fields_and_majors, maxcount=40, CIPS_codes, yml, index_table, population_by_state_by_age, college_chosen_comparison_table) {
-	
+RenderInstitutionPagesComparison <- function(comparison_table, fields_and_majors, maxcount=40, CIPS_codes, yml, index_table, population_by_state_by_age, college_chosen_comparison_table, scorecard_field_organized) {
+	index_table_original <- index_table
 	institution_ids <- unique(comparison_table$`UNITID Unique identification number of the institution`)
 	dead_institutions <- subset(comparison_table, comparison_table$`Status of institution`%in% c('Closed in current year (active has data)', 'Combined with other institution ', 'Delete out of business'))
 	institution_ids <- setdiff(institution_ids, dead_institutions$`UNITID Unique identification number of the institution`)
@@ -1592,12 +1602,14 @@ RenderInstitutionPagesComparison <- function(comparison_table, fields_and_majors
 				input="_institution_comparison.Rmd", 
 				output_file="docs/institution.html", 
 				params = list(
-					institution_name = institution_name,
-					institution_long_name = institution_name,
-					institution_id =  institution_id,
-					comparison_table = comparison_table,
-					index_table=index_table,
-					population_by_state_by_age=population_by_state_by_age
+					institution_name_in = institution_name,
+					institution_long_name_in = institution_name,
+					institution_id_in =  institution_id,
+					comparison_table_in = comparison_table,
+					index_table_in=index_table_original,
+					population_by_state_by_age=population_by_state_by_age,
+					college_chosen_comparison_table_in=college_chosen_comparison_table,
+					scorecard_field_organized_in=scorecard_field_organized
 				),
 				quiet=TRUE
 			)
@@ -1611,7 +1623,7 @@ RenderInstitutionPagesComparison <- function(comparison_table, fields_and_majors
 			file.copy("docs/institution.html", paste0("docs/", utils::URLencode(gsub(" ", "", institution_id)), ".html"), overwrite=TRUE)
 			print(paste0("docs/", utils::URLencode(gsub(" ", "", institution_id)), ".html"))
 			print(paste0("Institution ", i, " of ", length(institution_ids), " rendered, ", 100*i/length(institution_ids), "% complete"))
-			system(paste0("open docs/", utils::URLencode(gsub(" ", "", institution_id)), ".html"))
+			#system(paste0("open docs/", utils::URLencode(gsub(" ", "", institution_id)), ".html"))
 			Sys.sleep(1)
 			failed <- FALSE
 		}, silent=TRUE)
@@ -1781,7 +1793,7 @@ GetFieldData <- function(fields_and_majors) {
 }
 
 # pages is there just so it will run this after the pages are run
-RenderIndexPageEtAl <- function(pages, index_table, yml, CIPS_codes, comparison_table, fields_and_majors, field_data) {
+RenderIndexPageEtAl <- function(pages, index_table, yml, CIPS_codes, comparison_table, fields_and_majors, field_data, scorecard_field_aggregated) {
 	system("rm docs/index.html")
 	db <- dbConnect(RSQLite::SQLite(), "data/db_IPEDS.sqlite")
 
@@ -1806,7 +1818,9 @@ RenderIndexPageEtAl <- function(pages, index_table, yml, CIPS_codes, comparison_
 		output_file="docs/fields_overview.html", 
 		params = list(
 			CIPS_codes = CIPS_codes,
-			field_data = field_data
+			field_data = field_data,
+			scorecard_field_aggregated = scorecard_field_aggregated
+			
 		),
 		quiet=FALSE
 	)	
@@ -2192,15 +2206,19 @@ VectorStringNaOmit <- function(x) {
 
 
 
-formatMe <- function(x, digits=0, prefix="", unitsuffix="") {
+formatMe <- function(x, digits=0, prefix="", unitsuffix="", missing_val="Unknown") {
+	x_original <- x
 	try(x <- as.numeric(x), silent=TRUE)
-	if(is.na(x)) {
-		return("Unknown")
+	if(is.na(x_original)) {
+		return(missing_val)
 	}
-	if(!is.numeric(x)) {
-		return("Unknown")
-	}
+	# if(!is.numeric(x) | is.na(x)) {
+	# 	return(x_original)
+	# }
 	x_sign <- sign(x)
+	if(is.na(x_sign)) {
+		return(x_original)
+	}
 	x <- abs(x)
 	suffix <- ""
 	if(x>1e12) {
@@ -2814,6 +2832,107 @@ ReplaceNAWithInf <- function(x) {
 	return(as.numeric(x))
 }
 
+GetInstitutionScorecardData <- function(focal_url='https://ed-public-download.scorecard.network/downloads/Most-Recent-Cohorts-Institution_06102024.zip') {
+	temp_dir <- tempdir()
+	destination <- paste0(temp_dir, "/scorecard_insitution.zip")
+	tryCatch(download.file(url=focal_url, destfile=destination))
+	unzip(destination, exdir=temp_dir)
+	institution_scorecard <- read.csv(paste0(temp_dir, "/Most-Recent-Cohorts-Institution.csv"), stringsAsFactors=FALSE)
+	return(institution_scorecard)
+}
+
+GetFieldOfStudyScorecardData <- function(focal_url='https://ed-public-download.scorecard.network/downloads/Most-Recent-Cohorts-Field-of-Study_06102024.zip') {
+	temp_dir <- tempdir()
+	destination <- paste0(temp_dir, "/scorecard_field.zip")
+	tryCatch(download.file(url=focal_url, destfile=destination))
+	unzip(destination, exdir=temp_dir)
+	field_scorecard <- read.csv(paste0(temp_dir, "/Most-Recent-Cohorts-Field-of-Study.csv"), stringsAsFactors=FALSE)
+	field_scorecard <- field_scorecard |> dplyr::select(UNITID, OPEID6, INSTNM, CIPCODE, CIPDESC, CREDLEV,  CREDDESC, EARN_COUNT_WNE_1YR, EARN_MDN_1YR, EARN_COUNT_WNE_5YR,
+EARN_MDN_5YR, EARN_COUNT_MALE_WNE_1YR, EARN_MALE_WNE_MDN_1YR, EARN_COUNT_NOMALE_WNE_1YR, EARN_NOMALE_WNE_MDN_1YR, EARN_COUNT_MALE_WNE_5YR, EARN_MALE_WNE_MDN_5YR, EARN_COUNT_NOMALE_WNE_5YR, EARN_NOMALE_WNE_MDN_5YR)
+	field_scorecard$EARN_COUNT_WNE_1YR <- as.numeric(field_scorecard$EARN_COUNT_WNE_1YR)
+	
+	field_scorecard$EARN_MDN_1YR <- as.numeric(field_scorecard$EARN_MDN_1YR)
+	
+	field_scorecard$EARN_COUNT_WNE_5YR <- as.numeric(field_scorecard$EARN_COUNT_WNE_5YR)
+	
+	field_scorecard$EARN_MDN_5YR <- as.numeric(field_scorecard$EARN_MDN_5YR)
+	
+	field_scorecard$EARN_COUNT_MALE_WNE_1YR <- as.numeric(field_scorecard$EARN_COUNT_MALE_WNE_1YR)
+	
+	field_scorecard$EARN_MALE_WNE_MDN_1YR <- as.numeric(field_scorecard$EARN_MALE_WNE_MDN_1YR)
+	
+	field_scorecard$EARN_COUNT_NOMALE_WNE_1YR <- as.numeric(field_scorecard$EARN_COUNT_NOMALE_WNE_1YR)
+	
+	field_scorecard$EARN_NOMALE_WNE_MDN_1YR <- as.numeric(field_scorecard$EARN_NOMALE_WNE_MDN_1YR)
+	
+	field_scorecard$EARN_COUNT_MALE_WNE_5YR <- as.numeric(field_scorecard$EARN_COUNT_MALE_WNE_5YR)
+	
+	field_scorecard$EARN_MALE_WNE_MDN_5YR <- as.numeric(field_scorecard$EARN_MALE_WNE_MDN_5YR)
+	
+	field_scorecard$EARN_COUNT_NOMALE_WNE_5YR <- as.numeric(field_scorecard$EARN_COUNT_NOMALE_WNE_5YR)
+	
+	field_scorecard$EARN_NOMALE_WNE_MDN_5YR <- as.numeric(field_scorecard$EARN_NOMALE_WNE_MDN_5YR)
+	
+	field_scorecard$CIPDESC <- stringr::str_sub(field_scorecard$CIPDESC, end=-2) # remove trailing period
+	field_scorecard$CIPDESC  <- gsub(", General$", "", field_scorecard$CIPDESC ) 
+	
+	field_scorecard$CREDDESC[grepl("Certificate", field_scorecard$CREDDESC)] <- "Certificate"
+	field_scorecard$CREDDESC <- gsub("'s Degree", "s", field_scorecard$CREDDESC)
+	field_scorecard$CREDDESC <- gsub("Doctoral Degree", "Doctorate", field_scorecard$CREDDESC)
+	field_scorecard <- field_scorecard[field_scorecard$CREDDESC %in% c("Certificate", "Associates", "Bachelors", "Masters", "Doctorate"),]
+	
+	return(field_scorecard)
+}
+
+weighted.mean.na.rm <- function(x, w) {
+	bad <- is.na(x) | is.na(w)
+	x <- x[!bad]
+	w <- w[!bad]
+	if(length(x)==0) {
+		return(NA)
+	}
+	return(weighted.mean(x, w))
+}
+
+AggregateScorecard <- function(scorecard_field) {
+	overall_summary <- scorecard_field |> dplyr::group_by(CIPCODE, CIPDESC, CREDLEV, CREDDESC) |> dplyr::summarise(
+		`Count 1 year all` = sum(EARN_COUNT_WNE_1YR, na.rm=TRUE),
+		`Earnings 1 year all` = weighted.mean.na.rm(x=EARN_MDN_1YR, w=EARN_COUNT_WNE_1YR),
+		`Count 5 year all` = sum(EARN_COUNT_WNE_5YR, na.rm=TRUE),
+		`Earnings 5 year all` = weighted.mean.na.rm(x=EARN_MDN_5YR, w=EARN_COUNT_WNE_5YR),
+		`Count 1 year men` = sum(EARN_COUNT_MALE_WNE_1YR, na.rm=TRUE),
+		`Earnings 1 year men` = weighted.mean.na.rm(x=EARN_MALE_WNE_MDN_1YR, w=EARN_COUNT_MALE_WNE_1YR),
+		`Count 1 year women` = sum(EARN_COUNT_NOMALE_WNE_1YR, na.rm=TRUE),
+		`Earnings 1 year women` = weighted.mean.na.rm(x=EARN_NOMALE_WNE_MDN_1YR, w=EARN_COUNT_NOMALE_WNE_1YR),
+		`Count 5 year men` = sum(EARN_COUNT_MALE_WNE_5YR, na.rm=TRUE),
+		`Earnings 5 year men` = weighted.mean.na.rm(x=EARN_MALE_WNE_MDN_5YR, w=EARN_COUNT_MALE_WNE_5YR),
+		`Count 5 year women` = sum(EARN_COUNT_NOMALE_WNE_5YR, na.rm=TRUE),
+		`Earnings 5 year women` = weighted.mean.na.rm(x=EARN_NOMALE_WNE_MDN_5YR, w=EARN_COUNT_NOMALE_WNE_5YR)
+	)
+	
+
+	
+	
+	return(overall_summary)
+}
+
+OrganizeScorecardField <- function(scorecard_field) {
+	scorecard_field_organized <- data.frame(
+		UNITID=scorecard_field$UNITID,
+		Institution=scorecard_field$INSTNM, 
+		Field=scorecard_field$CIPDESC, 
+		Degree=scorecard_field$CREDDESC,
+		`Earnings 1 year all`=scorecard_field$EARN_MDN_1YR,
+		`W/M earning ratio 1 year`=scorecard_field$EARN_NOMALE_WNE_MDN_1YR/scorecard_field$EARN_MALE_WNE_MDN_1YR,
+		`Earnings 5 year all`=scorecard_field$EARN_MDN_5YR,
+		`W/M earning ratio 5 year`=scorecard_field$EARN_NOMALE_WNE_MDN_5YR/scorecard_field$EARN_MALE_WNE_MDN_5YR,
+		`Earnings 1 year men`=scorecard_field$EARN_MALE_WNE_MDN_1YR,
+		`Earnings 1 year women`=scorecard_field$EARN_NOMALE_WNE_MDN_1YR,
+		`Earnings 5 year men`=scorecard_field$EARN_MALE_WNE_MDN_5YR,
+		`Earnings 5 year women`=scorecard_field$EARN_NOMALE_WNE_MDN_5YR
+		)
+	return(scorecard_field_organized)
+}
 
 CreateDBFromAccess <- function(min_year=2012) { 
 	try({file.remove("data/db_IPEDS_access.sqlite")}, silent=TRUE)
@@ -2992,3 +3111,63 @@ WWFload <- function(x = NULL) {
     return(wwf)
 }
 
+CreateColorsForInstitution <- function(focal_category, final_summary, final_summary_raw, conversion_table, byrow=TRUE) {
+		
+	color_ramp_good <- colorRampPalette(c("red", "blue"))(101)
+	color_ramp_bad <- rev(colorRampPalette(c("red", "blue"))(101))
+	color_ramp_neutral <- colorRampPalette(viridisLite::mako(begin=0.3, end=0.8, n=12))(101)
+	
+	
+	local_summary <- subset(final_summary, final_summary$Category==focal_category)
+		
+	local_summary_raw <- subset(final_summary_raw, final_summary_raw$Category==focal_category) |> dplyr::select(-Category)
+
+	local_conversion <- subset(conversion_table, conversion_table$Category==focal_category)
+	
+	fn_ecdf <- NULL
+	
+	if(!byrow) {
+		raw_distribution <- as.numeric(as.numeric(local_summary_raw[, 2:ncol(local_summary_raw)]))
+		raw_distribution <- raw_distribution[!is.na(raw_distribution)]
+		if(length(raw_distribution)>0) {
+			fn_ecdf <- ecdf(raw_distribution)
+		}	
+	}
+
+
+	for (row_index in 1:nrow(local_summary)) {
+		if(byrow) {
+			raw_distribution <- as.numeric(local_summary_raw[row_index, 2:ncol(local_summary_raw)])
+			raw_distribution <- raw_distribution[!is.na(raw_distribution)]
+			if(length(raw_distribution)>0) {
+				fn_ecdf <- ecdf(raw_distribution)
+			}
+		}
+		color_ramp <- color_ramp_neutral
+		try({
+			if(local_conversion$Better[row_index]=="Higher") {
+				color_ramp <- color_ramp_good
+			} else if(local_conversion$Better[row_index]=="Lower") {
+				color_ramp <- color_ramp_bad
+			}
+		} , silent=TRUE)
+		for(col_index in 2:ncol(local_summary)) {
+			entry <- local_summary[row_index, col_index]
+			entry_raw <- as.numeric(local_summary_raw[row_index, col_index])
+			entry_raw_percentile <- 100*fn_ecdf(entry_raw)
+			try({
+				if(grepl("NaN", entry)) {
+					local_summary[row_index, col_index] <- ""
+				} else {
+					if(!is.na(entry_raw)) {
+						entry_raw_percentile <- 100*fn_ecdf(entry_raw)
+						chosen_color <- color_ramp[round(entry_raw_percentile)]
+						local_summary[row_index, col_index] <- gsub('color:#000000', paste0('color:',chosen_color), local_summary[row_index, col_index])
+					}
+				}
+			}, silent=TRUE)
+
+		}
+	}
+	return(local_summary)	
+}

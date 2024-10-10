@@ -17,14 +17,14 @@ tar_option_set(memory = "transient", garbage_collection = TRUE)
 tar_make(callr_function = NULL)
 #tar_make()
 
-#system("cp -r docs/* ../collegetables_site")
+#system("cp -r docs/* ../collegetables_site_x2024")
 #system("cp *html docs")
-#system("cp *html ../collegetables_site")
+#system("cp *html ../collegetables_site_x2024")
 #system("cp CNAME docs/CNAME")
 
 
-#system('rsync -avz --delete --exclude=".*" docs/ ../collegetables_site/')
-#system("cp CNAME ../collegetables_site/CNAME")
+#system('rsync -avz --delete --exclude=".*" docs/ ../collegetables_site_x2024/')
+#system("cp CNAME ../collegetables_site_x2024/CNAME")
 
-system("open docs/vertical.html")
+system("open docs/index.html")
 

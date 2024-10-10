@@ -8,6 +8,7 @@ output:
 params:
   CIPS_codes: "nothing"
   field_data: "nothing"
+  scorecard_field_aggregated: "nothing"
   
 ---
 
@@ -58,7 +59,58 @@ field_data_merged_with_headers$CertificateURL <- URLEncodeTotal(paste0("majors_"
 
 field_data_merged_with_headers$Field <- gsub(", General$", "", field_data_merged_with_headers$Field) #just to save on space
 
+degree_vector <- c("Bachelors", "Masters", "Doctorate", "Associates", "Certificate")
+gender_vector <- c("all", "men", "women")
 
+for (degree in degree_vector) {
+	for (gender in gender_vector) {
+		field_data_merged_with_headers[[paste0(degree, " ", gender, " earnings 5 yr") ]] <- NA
+
+		
+		field_data_merged_with_headers[[paste0(degree, " ", gender, " earnings 1 yr") ]] <- NA
+		for(i in sequence(nrow(field_data_merged_with_headers))) {
+	
+			try(field_data_merged_with_headers[i, paste0(degree, " ", gender, " earnings 5 yr") ] <- scorecard_field_aggregated[which(scorecard_field_aggregated$CIPDESC==field_data_merged_with_headers$Field[i] & scorecard_field_aggregated$CREDDESC==degree), paste0("Earnings 5 year ", gender)], silent=TRUE)
+			
+			
+			try(field_data_merged_with_headers[i, paste0(degree, " ", gender, " earnings 1 yr") ] <- scorecard_field_aggregated[which(scorecard_field_aggregated$CIPDESC==field_data_merged_with_headers$Field[i] & scorecard_field_aggregated$CREDDESC==degree), paste0("Earnings 1 year ", gender)], silent=TRUE)
+			
+		}
+	}
+}
+
+field_data_merged_with_headers <- field_data_merged_with_headers |> dplyr::select("Area", "Field", 
+
+"Bachelors", "Bachelors all earnings 1 yr", "Bachelors all earnings 5 yr", 
+
+"Masters", "Masters all earnings 1 yr", "Masters all earnings 5 yr",
+
+"Doctorate", "Doctorate all earnings 1 yr", "Doctorate all earnings 5 yr",
+ 
+"Associates", "Associates all earnings 1 yr", "Associates all earnings 5 yr", 
+
+"Certificate", "Certificate all earnings 1 yr", "Certificate all earnings 5 yr",
+
+"Definition",
+
+
+
+"Bachelors women earnings 1 yr", "Bachelors men earnings 1 yr",
+"Bachelors women earnings 5 yr",  "Bachelors men earnings 5 yr", 
+
+"Masters women earnings 1 yr", "Masters men earnings 1 yr",
+"Masters women earnings 5 yr",  "Masters men earnings 5 yr",
+
+"Doctorate women earnings 1 yr", "Doctorate men earnings 1 yr",
+"Doctorate women earnings 5 yr", "Doctorate men earnings 5 yr",
+
+"Associates women earnings 1 yr", "Associates men earnings 1 yr",
+"Associates women earnings 5 yr",  "Associates men earnings 5 yr", 
+
+"Certificate women earnings 1 yr", "Certificate men earnings 1 yr",
+"Certificate women earnings 5 yr",  "Certificate men earnings 5 yr", 
+
+"BachelorsURL", "MastersURL", "DoctorateURL", "AssociatesURL", "CertificateURL")
 
 #reactable(
 #  field_family_level,
@@ -79,7 +131,7 @@ reactable(
   highlight = TRUE,
   striped = TRUE,
   defaultColDef = colDef(
-	show = FALSE
+	show = TRUE
   ),
 	columns = list(
 		Area = colDef(minWidth = 100, show=TRUE),
@@ -92,6 +144,43 @@ reactable(
 			}
 		')
 		),
+		BachelorsURL = colDef(show=FALSE),
+		MastersURL = colDef(show=FALSE),
+		DoctorateURL = colDef(show=FALSE),
+		AssociatesURL = colDef(show=FALSE),
+		CertificateURL = colDef(show=FALSE),	
+		`Bachelors all earnings 1 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Bachelors all earnings 5 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Masters all earnings 1 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Masters all earnings 5 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Doctorate all earnings 1 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Doctorate all earnings 5 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Associates all earnings 1 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Associates all earnings 5 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Certificate all earnings 1 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Certificate all earnings 5 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Bachelors women earnings 1 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Bachelors women earnings 5 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Masters women earnings 1 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Masters women earnings 5 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Doctorate women earnings 1 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Doctorate women earnings 5 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Associates women earnings 1 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Associates women earnings 5 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Certificate women earnings 1 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Certificate women earnings 5 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Bachelors men earnings 1 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Bachelors men earnings 5 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Masters men earnings 1 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Masters men earnings 5 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Doctorate men earnings 1 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Doctorate men earnings 5 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Associates men earnings 1 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Associates men earnings 5 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Certificate men earnings 1 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+		`Certificate men earnings 5 yr` = colDef(show=TRUE, format=colFormat(separators=TRUE, currency="USD", digits=0)),
+	
+
 		Masters = colDef(html = TRUE, format=colFormat(separators=TRUE), show=TRUE, cell = JS('
 			function(cellInfo) {
 			// Render as a link
