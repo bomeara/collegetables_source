@@ -15,14 +15,15 @@ This was done over a break in summer 2022 while starting to take my kids on coll
 
 **If you have feedback on the site (corrections, good data sources, etc.) please go [here](https://forms.gle/C9D7WXaMDVrTm3Z3A) (and thank you!).**
 
-There are two main types of pages on this site: one page for each institution (over 9,000 of them) and pages of degrees offered by various groupings of schools.
+There are two main types of pages on this site: one page for each institution (over 4,000 of them) and pages of degrees offered by various groupings of schools.
 
 * The institutions have their individual data as well as comparisons with "similar" schools, where similar is based on athletic conference (for example, small liberal arts schools in Western Massachusetts), the type of the school (i.e., is it a research intensive doctoral institution). For metrics where one direction is better (lower cost is good; more faculty is good) there is a ranking versus schools in the comparison group. There are also line plots showing trends over time. If a trend is "significant" (i.e., it is not likely to be due to random chance, as assessed by fitting a linear model (and not correcting for multiple comparisons)) then there is a column indicating the slope of the trend.
 * The degrees pages show degrees awarded in different fields in the most recent year available. There are many, many specific majors, so the main groups are listed at [fields_overview.html] and you can then drill down into the subfields. 
+* This page includes social factors: gun control laws, abortion laws, and more. Many students choose to go in state, but a substantial number who consider out of state do [look at factors such as these](https://www.insidehighered.com/news/government/politics-elections/2024/10/14/survey-finds-students-base-college-decisions-state) when deciding where to go to school. This site is set up to be neutral, just presenting information on state laws or other policies. 
 
 ## Changes
 
-* October, 2024: Updated to Oct. 1, 2024 map on abortion restrictions from [Guttmacher Institute](https://states.guttmacher.org/policies/).
+* October, 2024: Updated to Oct. 1, 2024 map on abortion restrictions from [Guttmacher Institute](https://states.guttmacher.org/policies/), dropped schools that do not contribute data to IPEDS (including ones that have closed), added more comparisons between schools.
 * July 15, 2024: Updated trans risk map from [Erin Reed](https://www.erininthemorning.com/p/anti-trans-legislative-risk-assessment-3dc) to be for risk for adults of anti-trans laws within the next two years (map from July 11, 2024); changed gun law stringency to use more neutral language ("A" becomes "Very high"). 
 * April 7, 2024: Updated trans risk map from [Erin Reed](https://www.erininthemorning.com/p/anti-trans-legislative-risk-assessment-cd3) to be for risk for adults of anti-trans laws within the next two years (map from March 25, 2024).
 * February 25, 2024: Update to latest IPEDS data.

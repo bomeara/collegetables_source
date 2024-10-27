@@ -1,0 +1,51 @@
+---
+title: "Earnings by field"
+output:
+  rmdformats::readthedown:
+    self_contained: false
+    includes:
+      in_header: GA_Script.html
+params:
+  scorecard_field_aggregated_in: "nothing"
+---
+
+This has earnings by field one year and five years after graduation. It is filtered to only include fields with at least 10 graduates recorded both one year and five years after graduation and no missing data.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE}
+source("_packages.R")
+source("R/functions.R")
+scorecard_field_aggregated <- params$scorecard_field_aggregated_in |> dplyr::ungroup() |> as.data.frame()
+for (i in 5:ncol(scorecard_field_aggregated)) {
+  scorecard_field_aggregated[,i] <- round(as.numeric(scorecard_field_aggregated[,i]),0)
+}
+big <- subset(scorecard_field_aggregated, scorecard_field_aggregated$`Count 1 year all`>=10 & scorecard_field_aggregated$`Count 5 year all`>=10)
+big <- big[complete.cases(big),]
+big$`Earnings 1 year women minus men` <- big$`Earnings 1 year women` - big$`Earnings 1 year men`
+big$`Earnings 5 year women minus men` <- big$`Earnings 5 year women` - big$`Earnings 5 year men`
+big$sqrt_count_1_year <- 0.1*sqrt(big$`Count 1 year all`)
+big$sqrt_count_5_year <- 0.1*sqrt(big$`Count 5 year all`)
+```
+
+## Earnings by field one year after graduation
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE}
+fig <- plot_ly(big, x = ~`Earnings 1 year men`, y = ~`Earnings 1 year women minus men`,  text = ~CIPDESC, type = 'scatter', mode = 'markers', color=~CREDDESC,
+        marker = list(size = ~`sqrt_count_1_year`, opacity = 0.5))
+fig <- fig %>% layout(title = 'Gender Gap in Earnings by Field One Year After Graduation',
+         xaxis = list(showgrid = FALSE),
+         yaxis = list(showgrid = FALSE))
+
+fig
+```
+
+## Earnings by field five years after graduation
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE}
+fig <- plot_ly(big, x = ~`Earnings 5 year men`, y = ~`Earnings 5 year women minus men`,  text = ~CIPDESC, type = 'scatter', mode = 'markers', color=~CREDDESC,
+        marker = list(size = ~`sqrt_count_5_year`, opacity = 0.5))
+fig <- fig %>% layout(title = 'Gender Gap in Earnings by Field Five Years After Graduation',
+         xaxis = list(showgrid = FALSE),
+         yaxis = list(showgrid = FALSE))
+
+fig
+```

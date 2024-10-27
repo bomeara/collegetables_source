@@ -892,8 +892,19 @@ FixTooManyColumns <- function(local_df) {
 }
 
 PersonalFilter <- function(focal_table) {
-	#focal_table <- subset(focal_table, `State`!="Tennessee")
-	#focal_table <- subset(focal_table, `State`!="TN")
+	institution_ids <- unique(focal_table$`UNITID Unique identification number of the institution`)
+	dead_institutions <- subset(focal_table, focal_table$`Status of institution`%in% c('Closed in current year (active has data)', 'Combined with other institution ', 'Delete out of business'))
+	
+	institution_ids <- setdiff(institution_ids, dead_institutions$`UNITID Unique identification number of the institution`)
+	focal_table <- subset(focal_table, focal_table$`UNITID Unique identification number of the institution` %in% institution_ids) # remove dead institutions so we don't compare with them
+	
+	focal_table_recent <- focal_table[order(focal_table$`IPEDS Year`, decreasing=TRUE),] |> dplyr::select(`IPEDS Year`, `UNITID Unique identification number of the institution`)
+	most_recent_year <- max(as.numeric(focal_table_recent$`IPEDS Year`), na.rm=TRUE)
+	focal_table_recent <- subset(focal_table_recent, focal_table_recent$`IPEDS Year` == most_recent_year)
+	institution_ids <- unique(focal_table_recent$`UNITID Unique identification number of the institution`)
+	
+	focal_table <- subset(focal_table, focal_table$`UNITID Unique identification number of the institution` %in% institution_ids) # remove nonupdated institutions so we don't compare with them
+
 	return(focal_table)	
 }
 
@@ -1573,9 +1584,21 @@ RenderInstitutionPagesNew <- function(comparison_table, fields_and_majors, maxco
 RenderInstitutionPagesComparison <- function(comparison_table, fields_and_majors, maxcount=40, CIPS_codes, yml, index_table, population_by_state_by_age, college_chosen_comparison_table, scorecard_field_organized) {
 	index_table_original <- index_table
 	institution_ids <- unique(comparison_table$`UNITID Unique identification number of the institution`)
-	dead_institutions <- subset(comparison_table, comparison_table$`Status of institution`%in% c('Closed in current year (active has data)', 'Combined with other institution ', 'Delete out of business'))
-	institution_ids <- setdiff(institution_ids, dead_institutions$`UNITID Unique identification number of the institution`)
-	comparison_table <- subset(comparison_table, comparison_table$`UNITID Unique identification number of the institution` %in% institution_ids) # remove dead institutions so we don't compare with them
+	# dead_institutions <- subset(comparison_table, comparison_table$`Status of institution`%in% c('Closed in current year (active has data)', 'Combined with other institution ', 'Delete out of business'))
+	# comparison_table_recent <- comparison_table[order(comparison_table$`IPEDS Year`, decreasing=TRUE),] |> dplyr::select(`IPEDS Year`, `UNITID Unique identification number of the institution`)
+	# most_recent_year <- max(as.numeric(comparison_table_recent$`IPEDS Year`), na.rm=TRUE)
+	# comparison_table_recent <- subset(comparison_table_recent, comparison_table_recent$`IPEDS Year` == most_recent_year)
+
+	# institution_ids <- setdiff(institution_ids, dead_institutions$`UNITID Unique identification number of the institution`)
+	# comparison_table <- subset(comparison_table, comparison_table$`UNITID Unique identification number of the institution` %in% institution_ids) # remove dead institutions so we don't compare with them
+	
+	# comparison_table_recent <- comparison_table[order(comparison_table$`IPEDS Year`, decreasing=TRUE),] |> dplyr::select(`IPEDS Year`, `UNITID Unique identification number of the institution`)
+	# most_recent_year <- max(as.numeric(comparison_table_recent$`IPEDS Year`), na.rm=TRUE)
+	# comparison_table_recent <- subset(comparison_table_recent, comparison_table_recent$`IPEDS Year` == most_recent_year)
+	# institution_ids <- unique(comparison_table_recent$`UNITID Unique identification number of the institution`)
+	
+	# comparison_table <- subset(comparison_table, comparison_table$`UNITID Unique identification number of the institution` %in% institution_ids) # remove nonupdated institutions so we don't compare with them
+
 	
 	# prioritize the "selective" schools to render first
 	
@@ -1698,7 +1721,10 @@ RenderMajorsPages <- function(fields_and_majors, CIPS_codes, yml, maxcount) {
 	field_data <- tbl(db, fields_and_majors[1]) %>% as.data.frame()
 	completions_with_percentage <- tbl(db, fields_and_majors[2]) %>% as.data.frame()
 	dbDisconnect(db)
-	
+	not_UTF8 <- which(!stringi::stri_enc_isutf8(completions_with_percentage$Institution))
+	for (row_to_fix in not_UTF8) {
+		completions_with_percentage$Institution[row_to_fix] <- iconv(completions_with_percentage$Institution[row_to_fix], from="latin1", to="UTF-8")
+	}
 	for (row_index in sequence(nrow(field_data))) {
 		try({
 		cat("\r",row_index, "/", nrow(field_data))
@@ -1821,6 +1847,15 @@ RenderIndexPageEtAl <- function(pages, index_table, yml, CIPS_codes, comparison_
 			field_data = field_data,
 			scorecard_field_aggregated = scorecard_field_aggregated
 			
+		),
+		quiet=FALSE
+	)	
+	
+	rmarkdown::render(
+		input="_earnings_overview.Rmd", 
+		output_file="docs/earnings_overview.html", 
+		params = list(
+			scorecard_field_aggregated_in = scorecard_field_aggregated
 		),
 		quiet=FALSE
 	)	
@@ -2278,7 +2313,6 @@ GetFieldsAndMajors <- function(comparison_table, ipeds_direct_and_db, CIPS_codes
 			AdmissionRate = "Admission percentage total"
 		))
 	
-	completions_simple <- PersonalFilter(completions_simple)
 	
 	completions_simple$CodeBroad <- substr(completions_simple$Code, 1, 2)
 		
@@ -3111,16 +3145,23 @@ WWFload <- function(x = NULL) {
     return(wwf)
 }
 
-CreateColorsForInstitution <- function(focal_category, final_summary, final_summary_raw, conversion_table, byrow=TRUE) {
+CreateColorsForInstitution <- function(focal_category, final_summary, final_summary_raw, conversion_table, byrow=TRUE, dosort=FALSE) {
 		
 	color_ramp_good <- colorRampPalette(c("red", "blue"))(101)
 	color_ramp_bad <- rev(colorRampPalette(c("red", "blue"))(101))
 	color_ramp_neutral <- colorRampPalette(viridisLite::mako(begin=0.3, end=0.8, n=12))(101)
 	
 	
-	local_summary <- subset(final_summary, final_summary$Category==focal_category)
-		
-	local_summary_raw <- subset(final_summary_raw, final_summary_raw$Category==focal_category) |> dplyr::select(-Category)
+	local_summary <- subset(final_summary, final_summary$Category==focal_category) 
+	try({local_summary <- local_summary |> dplyr::select(-Category)}, silent=TRUE)
+	local_summary_raw <- subset(final_summary_raw, final_summary_raw$Category==focal_category) 
+	try({local_summary_raw <- local_summary_raw |> dplyr::select(-Category)}, silent=TRUE)
+	
+	if(dosort) {
+		sort_order <- order(as.numeric(local_summary_raw[,2]), decreasing=TRUE)	
+		local_summary <- local_summary[sort_order,]
+		local_summary_raw <- local_summary_raw[sort_order,]
+	}
 
 	local_conversion <- subset(conversion_table, conversion_table$Category==focal_category)
 	
@@ -3154,8 +3195,8 @@ CreateColorsForInstitution <- function(focal_category, final_summary, final_summ
 		for(col_index in 2:ncol(local_summary)) {
 			entry <- local_summary[row_index, col_index]
 			entry_raw <- as.numeric(local_summary_raw[row_index, col_index])
-			entry_raw_percentile <- 100*fn_ecdf(entry_raw)
 			try({
+				entry_raw_percentile <- 100*fn_ecdf(entry_raw)
 				if(grepl("NaN", entry)) {
 					local_summary[row_index, col_index] <- ""
 				} else {
@@ -3170,4 +3211,68 @@ CreateColorsForInstitution <- function(focal_category, final_summary, final_summ
 		}
 	}
 	return(local_summary)	
+}
+
+ImputePopulationForPrediction <- function(comparison_table, fields_and_majors) {
+	comparison_table <- comparison_table[order(comparison_table$`IPEDS Year`, decreasing=TRUE),]
+	comparison_table_present <- subset(comparison_table, `IPEDS Year`==max(comparison_table$`IPEDS Year`, na.rm=TRUE))
+	
+	db <- dbConnect(RSQLite::SQLite(), "data/db_IPEDS.sqlite")
+	completions_with_percentage <- tbl(db, fields_and_majors[2]) %>% as.data.frame()
+	dbDisconnect(db)
+	bayes_feeder <- data.frame()
+	completions_with_percentage <- subset(completions_with_percentage, Degree=="Bachelors")
+	
+	for (unitid in unique(comparison_table$`UNITID Unique identification number of the institution`)) {
+		cat("\rUnitid: ", unitid)
+		try({ # handling rare errors for colleges with very little info
+			focal_focal <- subset(comparison_table, `UNITID Unique identification number of the institution`==unitid)
+			focal_completions <- subset(completions_with_percentage, UNITID==unitid)
+			most_current_info <- apply(focal_focal, 2, FirstNaOmit)
+			population <- most_current_info[ grepl("FirstYearFullTimeDegreeSeekingUndergrads", names(most_current_info))]
+			population <- population[!grepl("total|percent|Index|ender", names(population))]
+			names(population) <- gsub("FirstYearFullTimeDegreeSeekingUndergrads ", "", names(population))
+			population <- population[!is.na(population)]
+			all_ethnicities <- c()
+			for (i in sequence(length(population)) ) {
+				try({all_ethnicities <- c(all_ethnicities, rep(names(population)[i], as.numeric(population[i])))}, silent=TRUE)
+			}
+			simulated_table <- data.frame(
+				UNITID=unitid,
+				ethnicity=all_ethnicities,
+				gender="men"
+			)
+
+			simulated_table$gender[grepl("women", simulated_table$ethnicity)] <- "women"
+			simulated_table$ethnicity <- gsub(" w?o?men", "", simulated_table$ethnicity)
+			
+			try({simulated_table$eco_name=most_current_info$`eco_name`}, silent=TRUE)
+			try({simulated_table$realm=most_current_info$`realm`}, silent=TRUE)
+			try({simulated_table$miles_to_mountains=most_current_info$`Miles to Mountains`}, silent=TRUE)
+			try({simulated_table$AAUP_Censure=most_current_info$`AAUP_Censure`}, silent=TRUE)
+			
+			try({
+				state_percentages <- most_current_info[grepl("Percentage of enrolled first years who are from ", names(most_current_info))] 
+				names(state_percentages) <- gsub("Percentage of enrolled first years who are from ", "", names(state_percentages))
+				state_percentage_names <- names(state_percentages)
+				state_percentages <- as.numeric(state_percentages)
+				state_percentages <- state_percentages/sum(state_percentages)
+				simulated_table$students_from <- sample(state_percentage_names, size=nrow(simulated_table), replace=TRUE, prob=state_percentages)
+			}, silent=TRUE)
+			
+			try({simulated_table$field <- sample(focal_completions$Field, size=nrow(simulated_table), replace=TRUE, prob=focal_completions$`Percent at Institution`)}, silent=TRUE)
+			bayes_feeder <- dplyr::bind_rows(bayes_feeder, simulated_table)
+		}, silent=TRUE)
+	}
+	return(bayes_feeder)
+}
+
+PredictionModel <- function(bayes_feeder) {
+	nb <- naivebayes::naive_bayes(UNITID ~ ., data=bayes_feeder, laplace=0.001)	
+	return(nb)
+}
+
+PredictSchool <- function(nb, ethnicity_search=NA, gender_search=NA, students_from_search=NA, field_search=NA) {
+	prediction <- t(predict(nb, data.frame(ethnicity=ethnicity_search, gender=gender_search, students_from=students_from_search, field=field_search), type="prob" ))
+	prediction <- prediction[order(prediction[,1], decreasing=TRUE),]
 }

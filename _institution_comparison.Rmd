@@ -27,7 +27,6 @@ img {
 ```
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
-#save(list=ls(), file=paste0("~/Downloads/params_", params$institution_id_in, ".RData"))
 knitr::opts_chunk$set(dev="png", echo=FALSE, message=FALSE, warning=FALSE, error=FALSE)
 source("_packages.R")
 source("R/functions.R")
@@ -43,6 +42,9 @@ scorecard_field_organized <- params$scorecard_field_organized_in
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, eval=TRUE}
 #`UNITID Unique identification number of the institution`
+
+comparison_table$`Proportion of reps voting in favor of respect for marriage act` <- 100*as.numeric(comparison_table$`Proportion of reps voting in favor of respect for marriage act`)
+comparison_table$`Proportion of reps voting in favor of respect for right to contraception act` <- 100*as.numeric(comparison_table$`Proportion of reps voting in favor of respect for right to contraception act`)
 
 focal_focal <- subset(comparison_table, comparison_table$`UNITID Unique identification number of the institution`==params$institution_id)
 focal_focal <- focal_focal[order(focal_focal$`IPEDS Year`, decreasing=TRUE),]
@@ -75,11 +77,11 @@ try({
 	
 	index_table$Comparison <- ""
 
-	index_table$Comparison[index_table$UNITID %in% to_institutions] <- "→"
+	index_table$Comparison[index_table$UNITID %in% to_institutions] <- "↓"
 	
-	index_table$Comparison[index_table$UNITID %in% from_institutions] <- paste0(index_table$Comparison[index_table$UNITID %in% from_institutions], "←")
+	index_table$Comparison[index_table$UNITID %in% from_institutions] <- paste0(index_table$Comparison[index_table$UNITID %in% from_institutions], "↑")
 	
-	index_table$Comparison <- gsub("→←", "↔", index_table$Comparison)
+	index_table$Comparison <- gsub("↓↑", "↕", index_table$Comparison)
 	
 
 	focal_institutions_table <- subset(comparison_table, comparison_table$`UNITID Unique identification number of the institution` %in% index_table$UNITID)
@@ -92,6 +94,7 @@ try({
 	conversion_table <- read.csv("data/ConversionToComparisonCharts.csv")
 	
 	final_summary <- data.frame(matrix("", nrow=nrow(conversion_table), ncol=2+nrow(index_table)))
+
 	
 	colnames(final_summary) <- c("Category", "Measure", gsub("University", "U.", index_table$`Institution`))
 	
@@ -159,6 +162,8 @@ try({
 			}, silent=TRUE)
 		}	
 	}
+	final_summary <- final_summary[,!grepl("V\\d+", colnames(final_summary))]
+	final_summary_raw <- final_summary_raw[,!grepl("V\\d+", colnames(final_summary_raw))]
 }, silent=TRUE)	
 
 
@@ -175,7 +180,7 @@ try({
 
 try({
 	if(most_current_info['OPE Title IV eligibility indicator code'] %in% c("Deferment only - limited participation", "Not currently participating in Title IV, does not have OPE ID number", "Not currently participating in Title IV, has an OPE ID number", "Stopped participating during the survey year")) {
-		notes <- append(notes, "This institution has limited or no participation in the federal Title IV program. This prevents students from receiving some types of federal aid. Some institutions are ineligible for various reasons. Others could be eligible but choose not to receive federal funds in order to avoid following the requirements that go along with them, such as <a href='https://www.theatlantic.com/education/archive/2016/07/the-controversial-reason-some-religious-colleges-forgo-federal-funding/490253/'>guidelines on how to respond to sexual assault or bans on some kinds of discrimination</a>.")
+		notes <- append(notes, "This institution has limited or no participation in the federal Title IV program. This prevents students from receiving some types of federal aid. Some institutions are ineligible for various reasons (for example, US military academies like West Point, where everything is covered). Others could be eligible but choose not to receive federal funds in order to avoid following the requirements that go along with them, such as <a href='https://www.theatlantic.com/education/archive/2016/07/the-controversial-reason-some-religious-colleges-forgo-federal-funding/490253/'>guidelines on how to respond to sexual assault or bans on some kinds of discrimination</a>.")
 	}
 }, silent=TRUE)
 ```
@@ -328,7 +333,56 @@ leaflet() %>%
 
 # Comparisons
 
-The sections below show this institution compared with others. The ones listed are ones it has identified as peers, who consider themselves peers, and/or who the federal government considers peers. If a comparison school has the same value as the focal school, its cell is grayed out. Arrows show where there is a signficant trend over time for a school.
+The sections below show this institution compared with others. The ones listed are ones it has identified as peers, who consider themselves peers, and/or who the federal government considers peers. If a comparison school has the same value as the focal school, its cell is grayed out. Arrows show where there is a signficant trend over time for a school. You can swipe across the table to see more of it; the focal school column is always visible.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, eval=TRUE}
+index_ranked <- index_table[order(index_table$`pseudoranking`, decreasing=TRUE),]
+index_ranked$InstitutionWithURL <- paste0("<a href='", index_ranked$UNITID, ".html'>", index_ranked$Institution, "</a>")
+reciprocals <- subset(index_ranked, index_ranked$Comparison=='↕')$InstitutionWithURL
+to_institutions <- subset(index_ranked, index_ranked$Comparison=='↓')$InstitutionWithURL
+from_institutions <- subset(index_ranked, index_ranked$Comparison=='↑')$InstitutionWithURL
+```
+
+`r ifelse(length(reciprocals)>0, paste0("* ", most_current_info['Institution entity name'], " lists these schools as ones to compare itself within federal IPEDS data, and they do the same back: ", paste(reciprocals, collapse=', ')), "")`
+`r ifelse(length(to_institutions)>0, paste0("* ", most_current_info['Institution entity name'], " compares itself to these institutions, but not vice versa: ", paste(to_institutions, collapse=', ')), "")`
+`r ifelse(length(from_institutions)>0, paste0("* These institutions compare themselves to ", most_current_info['Institution entity name'], ", but not vice versa: ", paste(from_institutions, collapse=', ')), "")`
+
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, eval=FALSE}
+clean_comparison_table <- index_table |> dplyr::select(Institution, `Comparison`, `Admission percentage total`, `Grad rate in six years`, `Transfer out rate`, `Student to tenure track faculty ratio`, `Average net price for students with financial aid`, `UNITID`)
+
+
+  
+  
+#clean_comparison_table$Institution <-  paste0("<a href='", index_table$UNITID, ".html'>", clean_comparison_table$Institution, "</a>")
+
+clean_comparison_table$`Admission percentage total` <- sapply(clean_comparison_table$`Admission percentage total`,formatMe,0, unitsuffix='%', missing_val="")
+clean_comparison_table$`Grad rate in six years` <- sapply(clean_comparison_table$`Grad rate in six years`,formatMe,1, unitsuffix='%', missing_val="")
+clean_comparison_table$`Transfer out rate` <- sapply(clean_comparison_table$`Transfer out rate`,formatMe,1, unitsuffix='%', missing_val="")
+clean_comparison_table$`Student to tenure track faculty ratio` <- sapply(as.numeric(clean_comparison_table$`Student to tenure track faculty ratio`),formatMe,0, missing_val="")
+clean_comparison_table$`Average net price for students with financial aid` <- sapply(as.numeric(clean_comparison_table$`Average net price for students with financial aid`),formatMe, missing_val="", prefix="$")
+
+reactable(clean_comparison_table, 
+  defaultColDef = colDef(
+	minWidth = 150
+  ),
+  columns = list(
+    Institution = colDef(html = TRUE, show=TRUE, sticky="left", cell = JS('
+    function(cellInfo) {
+      // Render as a link
+      const url = `${cellInfo.row["UNITID"]}.html`
+      return `<a href="${url}" target="_blank">${cellInfo.value}</a>`
+    }
+  ')),
+    `UNITID` = colDef(show=FALSE)
+  ),
+  compact = TRUE, 
+  striped=TRUE,   
+  defaultPageSize = 200,
+  pagination=FALSE
+)
+```
 
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, eval=FALSE}	
@@ -362,10 +416,7 @@ reactable(final_summary,
 ## Enrollment
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, eval=TRUE}
-
-#save(list=ls(), file=paste0("~/Downloads/params_", params$institution_id_in, ".RData"))
-
-local_summary <- CreateColorsForInstitution(focal_category="Enrollment", final_summary=final_summary, final_summary_raw=final_summary_raw, conversion_table=conversion_table, byrow=TRUE)
+local_summary <- CreateColorsForInstitution(focal_category="Enrollment", final_summary=final_summary, final_summary_raw=final_summary_raw, conversion_table=conversion_table, byrow=TRUE) 
 ```
 
 
@@ -377,10 +428,7 @@ local_summary <- CreateColorsForInstitution(focal_category="Enrollment", final_s
 	filter = 'none',
 	extensions = c("FixedColumns", "FixedHeader"),
 	options = list(
-	  fixedColumns = list(leftColumns = 3),
-	  pageLength = -1,
-	  paging=FALSE,
-	  dom = 't'
+	  fixedColumns = list(leftColumns = 3)
    	 )
   ) |> formatStyle(1:ncol(local_summary), 'vertical-align'='top')
 ```
@@ -395,10 +443,7 @@ local_summary <- subset(final_summary, final_summary$Category=="General") |> dpl
 	filter = 'none',
 	extensions = c("FixedColumns", "FixedHeader"),
 	options = list(
-	  fixedColumns = list(leftColumns = 3),
-	  pageLength = -1,
-	  paging=FALSE,
-	  dom = 't'
+	  fixedColumns = list(leftColumns = 3)
    	 )
   ) |> formatStyle(1:ncol(local_summary), 'vertical-align'='top')
 ```
@@ -415,17 +460,17 @@ Having a low student to faculty ratio is considered a good thing by many, as it 
 
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, eval=TRUE}
-local_summary <- subset(final_summary, final_summary$Category=="Teaching") |> dplyr::select(-Category)
+
+local_summary <- CreateColorsForInstitution(focal_category="Teaching", final_summary=final_summary, final_summary_raw=final_summary_raw, conversion_table=conversion_table, byrow=TRUE) 
+
+#local_summary <- subset(final_summary, final_summary$Category=="Teaching") |> dplyr::select(-Category)
 	local_summary |> DT::datatable(
 	selection = 'none', 
 	rownames = '', 
 	filter = 'none',
 	extensions = c("FixedColumns", "FixedHeader"),
 	options = list(
-	  fixedColumns = list(leftColumns = 3),
-	  pageLength = -1,
-	  paging=FALSE,
-	  dom = 't'
+	  fixedColumns = list(leftColumns = 3)
    	 )
   ) |> formatStyle(1:ncol(local_summary), 'vertical-align'='top')
 ```
@@ -438,13 +483,13 @@ This has information on the location of the institution. See the [about page](ab
 
 local_summary <- subset(final_summary, final_summary$Category=="Geography") |> dplyr::select(-Category)
 
-state_rep_row <- which(local_summary$Measure=="State rep support for same sex and mixed race marriage")
+#state_rep_row <- which(local_summary$Measure=="State rep support for same sex and mixed race marriage")
 
-local_summary[state_rep_row,2:ncol(local_summary)] <- 100*as.numeric(local_summary[state_rep_row,2:ncol(local_summary)])
+#local_summary[state_rep_row,2:ncol(local_summary)] <- 100*as.numeric(local_summary[state_rep_row,2:ncol(local_summary)])
 
-contraception_row <- which(local_summary$Measure=="State rep support for contraception")
+#contraception_row <- which(local_summary$Measure=="State rep support for contraception")
 
-local_summary[contraception_row,2:ncol(local_summary)] <- 100*as.numeric(local_summary[contraception_row,2:ncol(local_summary)])
+#local_summary[contraception_row,2:ncol(local_summary)] <- 100*as.numeric(local_summary[contraception_row,2:ncol(local_summary)])
 
 	local_summary |> DT::datatable(
     selection = 'none', 
@@ -452,10 +497,7 @@ local_summary[contraception_row,2:ncol(local_summary)] <- 100*as.numeric(local_s
 	filter = 'none',
 	extensions = c("FixedColumns", "FixedHeader"),
 	options = list(
-	  fixedColumns = list(leftColumns = 3),
-	  pageLength = -1,
-	  paging=FALSE,
-	  dom = 't'
+	  fixedColumns = list(leftColumns = 3)
    	 )
   )  |> formatStyle(1:ncol(local_summary), 'vertical-align'='top')
 ```
@@ -516,10 +558,7 @@ for (row_index in 1:nrow(local_summary)) {
 	filter = 'none',
 	extensions = c("FixedColumns", "FixedHeader"),
 	options = list(
-	  fixedColumns = list(leftColumns = 3),
-	  pageLength = -1,
-	  paging=FALSE,
-	  dom = 't'
+	  fixedColumns = list(leftColumns = 3)
    	 )
   ) |> formatStyle(1:ncol(local_summary), 'vertical-align'='top')
 ```
@@ -560,10 +599,7 @@ for(col_index in 2:ncol(local_summary)) {
 	filter = 'none',
 	extensions = c("FixedColumns", "FixedHeader"),
 	options = list(
-	  fixedColumns = list(leftColumns = 3),
-	  pageLength = -1,
-	  paging=FALSE,
-	  dom = 't'
+	  fixedColumns = list(leftColumns = 3)
    	 )
   ) |> formatStyle(1:ncol(local_summary), 'vertical-align'='top')
 ```
@@ -620,10 +656,7 @@ for (row_index in 1:nrow(local_summary)) {
 	filter = 'none',
 	extensions = c("FixedColumns", "FixedHeader"),
 	options = list(
-	  fixedColumns = list(leftColumns = 3),
-	  pageLength = -1,
-	  paging=FALSE,
-	  dom = 't'
+	  fixedColumns = list(leftColumns = 3)
    	 )
   ) |> formatStyle(1:ncol(local_summary), 'vertical-align'='top')
 ```
@@ -665,10 +698,7 @@ for(col_index in 2:ncol(local_summary)) {
 	filter = 'none',
 	extensions = c("FixedColumns", "FixedHeader"),
 	options = list(
-	  fixedColumns = list(leftColumns = 3),
-	  pageLength = -1,
-	  paging=FALSE,
-	  dom = 't'
+	  fixedColumns = list(leftColumns = 3)
    	 )
   ) |> formatStyle(1:ncol(local_summary), 'vertical-align'='top')
 ```
@@ -677,8 +707,24 @@ for(col_index in 2:ncol(local_summary)) {
 
 Demographic data for first time degree-seeking students. Note that this uses US federal demographic data: it only has two genders and a specified set of ethnicities and races.
 
-
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, eval=TRUE}
+local_summary <- CreateColorsForInstitution(focal_category="Freshmen", final_summary=final_summary, final_summary_raw=final_summary_raw, conversion_table=conversion_table, byrow=TRUE, dosort=TRUE) 
+
+
+
+	local_summary |> DT::datatable(
+	selection = 'none', 
+	rownames = '', 
+	filter = 'none',
+	extensions = c("FixedColumns", "FixedHeader"),
+	options = list(
+	  fixedColumns = list(leftColumns = 3)
+   	 )
+  ) |> formatStyle(1:ncol(local_summary), 'vertical-align'='top')
+```
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, eval=FALSE}
 local_summary <- subset(final_summary, final_summary$Category=="Freshmen") |> dplyr::select(-Category)
 
 local_summary_raw <- subset(final_summary_raw, final_summary_raw$Category=="Freshmen") |> dplyr::select(-Category)
@@ -727,10 +773,7 @@ for (row_index in 1:nrow(local_summary)) {
 	filter = 'none',
 	extensions = c("FixedColumns", "FixedHeader"),
 	options = list(
-	  fixedColumns = list(leftColumns = 3),
-	  pageLength = -1,
-	  paging=FALSE,
-	  dom = 't'
+	  fixedColumns = list(leftColumns = 3)
    	 )
   ) |> formatStyle(1:ncol(local_summary), 'vertical-align'='top')
 ```
@@ -739,6 +782,23 @@ for (row_index in 1:nrow(local_summary)) {
 ## Freshman geography
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, eval=TRUE}
+local_summary <- CreateColorsForInstitution(focal_category="IncomingStatesCounts", final_summary=final_summary, final_summary_raw=final_summary_raw, conversion_table=conversion_table, byrow=TRUE, dosort=TRUE) 
+
+
+
+	local_summary |> DT::datatable(
+	selection = 'none', 
+	rownames = '', 
+	filter = 'none',
+	extensions = c("FixedColumns", "FixedHeader"),
+	options = list(
+	  fixedColumns = list(leftColumns = 3)
+   	 )
+  ) |> formatStyle(1:ncol(local_summary), 'vertical-align'='top')
+```
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, eval=FALSE}
 local_summary <- subset(final_summary, final_summary$Category=="IncomingStatesCounts") |> dplyr::select(-Category)
 
 
@@ -783,10 +843,7 @@ for (row_index in 1:nrow(local_summary)) {
 	filter = 'none',
 	extensions = c("FixedColumns", "FixedHeader"),
 	options = list(
-	  fixedColumns = list(leftColumns = 3),
-	  pageLength = -1,
-	  paging=FALSE,
-	  dom = 't'
+	  fixedColumns = list(leftColumns = 3)
    	 )
   ) |> formatStyle(1:ncol(local_summary), 'vertical-align'='top')
 ```
@@ -796,17 +853,18 @@ for (row_index in 1:nrow(local_summary)) {
 ## SAT scores
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, eval=TRUE}
-local_summary <- subset(final_summary, final_summary$Category=="SAT scores") |> dplyr::select(-Category)
+#local_summary <- subset(final_summary, final_summary$Category=="SAT scores") |> dplyr::select(-Category)
+local_summary <- CreateColorsForInstitution(focal_category="SAT scores", final_summary=final_summary, final_summary_raw=final_summary_raw, conversion_table=conversion_table, byrow=TRUE) 
+
+
+
 	local_summary |> DT::datatable(
 	selection = 'none', 
 	rownames = '', 
 	filter = 'none',
 	extensions = c("FixedColumns", "FixedHeader"),
 	options = list(
-	  fixedColumns = list(leftColumns = 3),
-	  pageLength = -1,
-	  paging=FALSE,
-	  dom = 't'
+	  fixedColumns = list(leftColumns = 3)
    	 )
   ) |> formatStyle(1:ncol(local_summary), 'vertical-align'='top')
 ```
@@ -814,17 +872,17 @@ local_summary <- subset(final_summary, final_summary$Category=="SAT scores") |> 
 ## ACT scores
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, eval=TRUE}
-local_summary <- subset(final_summary, final_summary$Category=="ACT scores") |> dplyr::select(-Category)
+#local_summary <- subset(final_summary, final_summary$Category=="ACT scores") |> dplyr::select(-Category)
+
+local_summary <- CreateColorsForInstitution(focal_category="ACT scores", final_summary=final_summary, final_summary_raw=final_summary_raw, conversion_table=conversion_table, byrow=TRUE) 
+
 	local_summary |> DT::datatable(
 	selection = 'none', 
 	rownames = '', 
 	filter = 'none',
 	extensions = c("FixedColumns", "FixedHeader"),
 	options = list(
-	  fixedColumns = list(leftColumns = 3),
-	  pageLength = -1,
-	  paging=FALSE,
-	  dom = 't'
+	  fixedColumns = list(leftColumns = 3)
    	 )
   ) |> formatStyle(1:ncol(local_summary), 'vertical-align'='top')
 ```
@@ -870,10 +928,7 @@ This presents information on the number of majors and the median earnings one an
 		DT::datatable(b_majors, rownames=FALSE,
 			extensions = c("FixedColumns", "FixedHeader"),
 	options = list(
-	  fixedColumns = list(leftColumns = 1),
-	  pageLength = -1,
-	  paging=FALSE,
-	  dom = 't'
+	  fixedColumns = list(leftColumns = 1)
    	 )
 	 )
 		
@@ -887,10 +942,7 @@ This presents information on the number of majors and the median earnings one an
 		DT::datatable(b_scorecard, rownames=FALSE,
 					extensions = c("FixedColumns", "FixedHeader"),
 	options = list(
-	  fixedColumns = list(leftColumns = 1),
-	  pageLength = -1,
-	  paging=FALSE,
-	  dom = 't'
+	  fixedColumns = list(leftColumns = 1)
    	 )) |> formatPercentage(c(3,5), digits=1) |> formatCurrency(c(2,4,6, 7, 8, 9), digits=0)
 	}
 ```	
@@ -903,10 +955,7 @@ This presents information on the number of majors and the median earnings one an
 		DT::datatable(m_majors, rownames=FALSE,
 			extensions = c("FixedColumns", "FixedHeader"),
 	options = list(
-	  fixedColumns = list(leftColumns = 1),
-	  pageLength = -1,
-	  paging=FALSE,
-	  dom = 't'
+	  fixedColumns = list(leftColumns = 1)
    	 )
 	 )
 		
@@ -920,10 +969,7 @@ This presents information on the number of majors and the median earnings one an
 		DT::datatable(m_scorecard, rownames=FALSE,
 					extensions = c("FixedColumns", "FixedHeader"),
 	options = list(
-	  fixedColumns = list(leftColumns = 1),
-	  pageLength = -1,
-	  paging=FALSE,
-	  dom = 't'
+	  fixedColumns = list(leftColumns = 1)
    	 )) |> formatPercentage(c(3,5), digits=1) |> formatCurrency(c(2,4,6, 7, 8, 9), digits=0)
 	}
 ```
@@ -936,10 +982,7 @@ This presents information on the number of majors and the median earnings one an
 		DT::datatable(d_majors, rownames=FALSE,
 			extensions = c("FixedColumns", "FixedHeader"),
 	options = list(
-	  fixedColumns = list(leftColumns = 1),
-	  pageLength = -1,
-	  paging=FALSE,
-	  dom = 't'
+	  fixedColumns = list(leftColumns = 1)
    	 )
 	 )
 		
@@ -953,10 +996,7 @@ This presents information on the number of majors and the median earnings one an
 		DT::datatable(d_scorecard, rownames=FALSE,
 					extensions = c("FixedColumns", "FixedHeader"),
 	options = list(
-	  fixedColumns = list(leftColumns = 1),
-	  pageLength = -1,
-	  paging=FALSE,
-	  dom = 't'
+	  fixedColumns = list(leftColumns = 1)
    	 )) |> formatPercentage(c(3,5), digits=1) |> formatCurrency(c(2,4,6, 7, 8, 9), digits=0)
 	}
 ```
@@ -969,10 +1009,7 @@ This presents information on the number of majors and the median earnings one an
 		DT::datatable(c_majors, rownames=FALSE,
 			extensions = c("FixedColumns", "FixedHeader"),
 	options = list(
-	  fixedColumns = list(leftColumns = 1),
-	  pageLength = -1,
-	  paging=FALSE,
-	  dom = 't'
+	  fixedColumns = list(leftColumns = 1)
    	 )
 	 )
 		
@@ -986,10 +1023,7 @@ This presents information on the number of majors and the median earnings one an
 		DT::datatable(c_scorecard, rownames=FALSE,
 					extensions = c("FixedColumns", "FixedHeader"),
 	options = list(
-	  fixedColumns = list(leftColumns = 1),
-	  pageLength = -1,
-	  paging=FALSE,
-	  dom = 't'
+	  fixedColumns = list(leftColumns = 1)
    	 )) |> formatPercentage(c(3,5), digits=1) |> formatCurrency(c(2,4,6, 7, 8, 9), digits=0)
 	}
 ```
@@ -1002,10 +1036,7 @@ This presents information on the number of majors and the median earnings one an
 		DT::datatable(a_majors, rownames=FALSE,
 			extensions = c("FixedColumns", "FixedHeader"),
 	options = list(
-	  fixedColumns = list(leftColumns = 1),
-	  pageLength = -1,
-	  paging=FALSE,
-	  dom = 't'
+	  fixedColumns = list(leftColumns = 1)
    	 )
 	 )
 		
@@ -1019,10 +1050,7 @@ This presents information on the number of majors and the median earnings one an
 		DT::datatable(a_scorecard, rownames=FALSE,
 					extensions = c("FixedColumns", "FixedHeader"),
 	options = list(
-	  fixedColumns = list(leftColumns = 1),
-	  pageLength = -1,
-	  paging=FALSE,
-	  dom = 't'
+	  fixedColumns = list(leftColumns = 1)
    	 )) |> formatPercentage(c(3,5), digits=1) |> formatCurrency(c(2,4,6, 7, 8, 9), digits=0)
 	}
 ```

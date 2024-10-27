@@ -68,6 +68,9 @@ list(
  tar_target(field_pages, RenderFieldPages(CIPS_codes, fields_and_majors, yml)),
  tar_target(majors, RenderMajorsPages(fields_and_majors, CIPS_codes, yml, maxcount)),
  tar_target(field_data, GetFieldData(fields_and_majors)),
- tar_target(index_et_al, RenderIndexPageEtAl(pages_new, index_table, yml, CIPS_codes, comparison_table, fields_and_majors, field_data, scorecard_field_aggregated))
+ tar_target(index_et_al, RenderIndexPageEtAl(pages_new, index_table, yml, CIPS_codes, comparison_table, fields_and_majors, field_data, scorecard_field_aggregated)),
+ 
+ tar_target(prediction_bayes_feeder, ImputePopulationForPrediction(comparison_table, fields_and_majors)),
+ tar_target(prediction_bayes_model, PredictionModel(prediction_bayes_feeder))
 
 )
