@@ -70,7 +70,10 @@ list(
  tar_target(field_data, GetFieldData(fields_and_majors)),
  tar_target(index_et_al, RenderIndexPageEtAl(pages_new, index_table, yml, CIPS_codes, comparison_table, fields_and_majors, field_data, scorecard_field_aggregated)),
  
- tar_target(prediction_bayes_feeder, ImputePopulationForPrediction(comparison_table, fields_and_majors)),
- tar_target(prediction_bayes_model, PredictionModel(prediction_bayes_feeder))
+ tar_target(prediction_bayes_feeder, ImputePopulationForPrediction(comparison_table, fields_and_majors, CIPS_codes)),
+ tar_target(prediction_bayes_model, PredictionModel(prediction_bayes_feeder)),
+ tar_target(render_prediction, RenderPredictionPage(prediction_bayes_model)),
+ tar_target(prediction_file, save(prediction_bayes_model, file='predict_shiny/prediction.rda')),
+ tar_target(namematch_file_saved, SaveNameMatchFile(comparison_table))
 
 )

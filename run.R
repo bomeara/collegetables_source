@@ -6,7 +6,7 @@ library(targets)
 source("_packages.R")
 source("R/functions.R")
 
-tar_invalidate(index_et_al)
+#tar_invalidate(index_et_al)
 
 tar_option_set(memory = "transient", garbage_collection = TRUE)
 

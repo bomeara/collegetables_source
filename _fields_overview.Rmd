@@ -125,11 +125,16 @@ field_data_merged_with_headers <- field_data_merged_with_headers |> dplyr::selec
 ```
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE}
+
 reactable(
   field_data_merged_with_headers,
   searchable = TRUE,
   highlight = TRUE,
   striped = TRUE,
+  theme = reactableTheme(
+    borderColor = "#dfe2e5",
+    stripedColor = "#f6f8fa"
+  ),
   defaultColDef = colDef(
 	show = TRUE
   ),

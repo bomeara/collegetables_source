@@ -9,7 +9,7 @@ params:
   scorecard_field_aggregated_in: "nothing"
 ---
 
-This has earnings by field one year and five years after graduation. It is filtered to only include fields with at least 10 graduates recorded both one year and five years after graduation and no missing data.
+This has earnings by field one year and five years after graduation. It is filtered to only include fields with at least 10 graduates recorded both one year and five years after graduation and no missing data. Data come from the [US College Scorecard](https://collegescorecard.ed.gov/data/) site.
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE}
 source("_packages.R")

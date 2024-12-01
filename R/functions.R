@@ -1818,6 +1818,16 @@ GetFieldData <- function(fields_and_majors) {
 	return(field_data)
 }
 
+RenderPredictionPage <- function(prediction_bayes_model_in) {
+	quarto::quarto_render(
+		input="_predict.qmd", 
+		output_file="predict.html",
+		quiet=FALSE
+	)	
+	system("open predict.html")
+	#move the file to the right place
+}
+
 # pages is there just so it will run this after the pages are run
 RenderIndexPageEtAl <- function(pages, index_table, yml, CIPS_codes, comparison_table, fields_and_majors, field_data, scorecard_field_aggregated) {
 	system("rm docs/index.html")
@@ -3149,7 +3159,9 @@ CreateColorsForInstitution <- function(focal_category, final_summary, final_summ
 		
 	color_ramp_good <- colorRampPalette(c("red", "blue"))(101)
 	color_ramp_bad <- rev(colorRampPalette(c("red", "blue"))(101))
-	color_ramp_neutral <- colorRampPalette(viridisLite::mako(begin=0.3, end=0.8, n=12))(101)
+#	color_ramp_neutral <- colorRampPalette(viridisLite::mako(begin=0.3, end=0.8, n=12))(101)
+	color_ramp_neutral <- colorRampPalette(c("green3", "seagreen4"))(101)
+
 	
 	
 	local_summary <- subset(final_summary, final_summary$Category==focal_category) 
@@ -3213,7 +3225,7 @@ CreateColorsForInstitution <- function(focal_category, final_summary, final_summ
 	return(local_summary)	
 }
 
-ImputePopulationForPrediction <- function(comparison_table, fields_and_majors) {
+ImputePopulationForPrediction <- function(comparison_table, fields_and_majors, CIPS_codes) {
 	comparison_table <- comparison_table[order(comparison_table$`IPEDS Year`, decreasing=TRUE),]
 	comparison_table_present <- subset(comparison_table, `IPEDS Year`==max(comparison_table$`IPEDS Year`, na.rm=TRUE))
 	
@@ -3228,6 +3240,9 @@ ImputePopulationForPrediction <- function(comparison_table, fields_and_majors) {
 		try({ # handling rare errors for colleges with very little info
 			focal_focal <- subset(comparison_table, `UNITID Unique identification number of the institution`==unitid)
 			focal_completions <- subset(completions_with_percentage, UNITID==unitid)
+			
+			focal_completions <- left_join(focal_completions, CIPS_codes, by=c("Field"="CIPTitle"))
+			
 			most_current_info <- apply(focal_focal, 2, FirstNaOmit)
 			population <- most_current_info[ grepl("FirstYearFullTimeDegreeSeekingUndergrads", names(most_current_info))]
 			population <- population[!grepl("total|percent|Index|ender", names(population))]
@@ -3246,10 +3261,10 @@ ImputePopulationForPrediction <- function(comparison_table, fields_and_majors) {
 			simulated_table$gender[grepl("women", simulated_table$ethnicity)] <- "women"
 			simulated_table$ethnicity <- gsub(" w?o?men", "", simulated_table$ethnicity)
 			
-			try({simulated_table$eco_name=most_current_info$`eco_name`}, silent=TRUE)
-			try({simulated_table$realm=most_current_info$`realm`}, silent=TRUE)
-			try({simulated_table$miles_to_mountains=most_current_info$`Miles to Mountains`}, silent=TRUE)
-			try({simulated_table$AAUP_Censure=most_current_info$`AAUP_Censure`}, silent=TRUE)
+			#try({simulated_table$eco_name=most_current_info['eco_name']}, silent=TRUE)
+			#try({simulated_table$realm=most_current_info['realm']}, silent=TRUE)
+			#try({simulated_table$miles_to_mountains=most_current_info['MilesToMountains']}, silent=TRUE)
+			#try({simulated_table$AAUP_Censure=most_current_info['AAUP_Censure']}, silent=TRUE)
 			
 			try({
 				state_percentages <- most_current_info[grepl("Percentage of enrolled first years who are from ", names(most_current_info))] 
@@ -3260,7 +3275,32 @@ ImputePopulationForPrediction <- function(comparison_table, fields_and_majors) {
 				simulated_table$students_from <- sample(state_percentage_names, size=nrow(simulated_table), replace=TRUE, prob=state_percentages)
 			}, silent=TRUE)
 			
-			try({simulated_table$field <- sample(focal_completions$Field, size=nrow(simulated_table), replace=TRUE, prob=focal_completions$`Percent at Institution`)}, silent=TRUE)
+			simulated_table$math_sat <- NA
+			simulated_table$reading_sat <- NA
+			simulated_table$english_act <- NA
+			simulated_table$math_act <- NA
+			
+			try({
+				math_sat_params <- FitBetaDistribution(lower_quartile=as.numeric(most_current_info['SAT Math 25th percentile score']), upper_quartile=as.numeric(most_current_info['SAT Math 75th percentile score']), min_val=200, max_val=800) 
+				simulated_table$math_sat <- SimulateTestParams(math_sat_params, npoints=nrow(simulated_table), min_val=200, max_val=800)
+			}, silent=TRUE)
+			
+			try({
+				reading_sat_params <- FitBetaDistribution(lower_quartile=as.numeric(most_current_info['SAT Evidence Based Reading and Writing 25th percentile score']), upper_quartile=as.numeric(most_current_info['SAT Evidence Based Reading and Writing 75th percentile score']), min_val=200, max_val=800)
+				simulated_table$reading_sat <- SimulateTestParams(reading_sat_params, npoints=nrow(simulated_table), min_val=200, max_val=800)
+			}, silent=TRUE)
+			
+			try({
+				english_act_params <- FitBetaDistribution(lower_quartile=as.numeric(most_current_info['ACT English 25th percentile score']), upper_quartile=as.numeric(most_current_info['ACT English 75th percentile score']), min_val=1, max_val=36)
+				simulated_table$english_act <- SimulateTestParams(english_act_params, npoints=nrow(simulated_table), min_val=1, max_val=36)
+			}, silent=TRUE)
+			
+			try({
+				math_act_params <- FitBetaDistribution(lower_quartile=as.numeric(most_current_info['ACT Math 25th percentile score']), upper_quartile=as.numeric(most_current_info['ACT Math 75th percentile score']), min_val=1, max_val=36)
+				simulated_table$math_act <- SimulateTestParams(math_act_params, npoints=nrow(simulated_table), min_val=1, max_val=36)
+			}, silent=TRUE)
+			
+			try({simulated_table$field <- sample(focal_completions$CIPFamilyName, size=nrow(simulated_table), replace=TRUE, prob=focal_completions$`Percent at Institution`)}, silent=TRUE)
 			bayes_feeder <- dplyr::bind_rows(bayes_feeder, simulated_table)
 		}, silent=TRUE)
 	}
@@ -3272,7 +3312,49 @@ PredictionModel <- function(bayes_feeder) {
 	return(nb)
 }
 
-PredictSchool <- function(nb, ethnicity_search=NA, gender_search=NA, students_from_search=NA, field_search=NA) {
+PredictSchool <- function(nb, comparison_table, nreturn=10, ethnicity_search=NA, gender_search=NA, students_from_search=NA, field_search=NA) {
+	comparison_table <- comparison_table[order(comparison_table$`IPEDS Year`, decreasing=TRUE),]
+	namematch_table <- comparison_table |> select(`UNITID Unique identification number of the institution`, `Institution entity name`)
 	prediction <- t(predict(nb, data.frame(ethnicity=ethnicity_search, gender=gender_search, students_from=students_from_search, field=field_search), type="prob" ))
-	prediction <- prediction[order(prediction[,1], decreasing=TRUE),]
+	prediction <- prediction[order(prediction[,1], decreasing=TRUE),][sequence(nreturn)]
+	prediction_df <- data.frame(school_name=sapply(names(prediction), ConvertUNITID_to_School, namematch_table=namematch_table), prediction=prediction, UNITID=names(prediction))
+	return(prediction_df)
+}
+
+ConvertUNITID_to_School <- function(UNITID, namematch_table) {
+	return(subset(namematch_table, namematch_table$`UNITID Unique identification number of the institution`==UNITID)$`Institution entity name`[1])
+}
+
+FitBetaDistribution <- function(lower_quartile, upper_quartile, min_val=200, max_val=800) {
+	lower_quartile_converted <- (lower_quartile-min_val)/(max_val-min_val)
+	upper_quartile_converted <- (upper_quartile-min_val)/(max_val-min_val)
+	#qbeta(0.25, shape1, shape2)=lower_quartile_converted
+	#qbeta(0.75, shape1, shape2)=upper_quartile_converted
+	difference_fn <- function(par, lower_quartile_converted, upper_quartile_converted) {
+		if(par[1]<0 | par[2]<0) { # want a nice peak
+			return(Inf)
+		}
+		return(sqrt((qbeta(0.75, par[1], par[2])-upper_quartile_converted)^2) + sqrt((qbeta(0.25, par[1], par[2])-lower_quartile_converted)^2))
+	}
+	pars <- optim(c(2, 2), difference_fn, lower_quartile_converted=lower_quartile_converted, upper_quartile_converted=upper_quartile_converted)$par
+	return(pars)
+}
+
+SimulateTestParams <- function(pars, npoints, min_val=200, max_val=800) {
+	simulated_values <- rbeta(npoints, pars[1], pars[2])
+	simulated_values <- simulated_values*(max_val-min_val)+min_val
+	if(max_val==800) {
+		simulated_values <- 10*round(0.1*simulated_values)
+	}
+	if(max_val==36) {
+		simulated_values <- round(simulated_values)
+	}
+	return(as.character(simulated_values))	
+}
+
+SaveNameMatchFile <- function(comparison_table) {
+	comparison_table <- comparison_table[order(comparison_table$`IPEDS Year`, decreasing=TRUE),]
+	namematch_table <- comparison_table |> dplyr::select(`UNITID Unique identification number of the institution`, `Institution entity name`)	
+	namematch_table <- namematch_table[!duplicated(namematch_table$`UNITID Unique identification number of the institution`),]
+	save(namematch_table, file="predict_shiny/namematch_table.rda")
 }

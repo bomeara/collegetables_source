@@ -307,14 +307,14 @@ crosstalk::filter_select("State", "State", all_colleges, ~State)
 
 crosstalk::filter_select("City", "City", all_colleges, ~City)
 
-crosstalk::filter_checkbox("AbortionAvail", "Abortion availability", all_colleges, ~`Abortion availability`)
+#crosstalk::filter_checkbox("AbortionAvail", "Abortion availability", all_colleges, ~`Abortion availability`)
 
-crosstalk::filter_checkbox("TransSafety", "Anti-trans legislative risk", all_colleges, ~`Anti-trans legislative risk`)
+#crosstalk::filter_checkbox("TransSafety", "Anti-trans legislative risk", all_colleges, ~`Anti-trans legislative risk`)
 
 
-crosstalk::filter_slider("contraceptionsupport", "State rep support for contraception", all_colleges, "percentcontraceptivesupport")
+#crosstalk::filter_slider("contraceptionsupport", "State rep support for contraception", all_colleges, "percentcontraceptivesupport")
 
-crosstalk::filter_slider("interracialsamesex", "State rep support for interracial and same-sex marriage", all_colleges, "interracialsamesexmarriage")
+#crosstalk::filter_slider("interracialsamesex", "State rep support for interracial and same-sex marriage", all_colleges, "interracialsamesexmarriage")
 
 crosstalk::filter_select("biome", "Biome", all_colleges, ~`Biome`)
 

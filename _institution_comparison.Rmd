@@ -43,9 +43,6 @@ scorecard_field_organized <- params$scorecard_field_organized_in
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, eval=TRUE}
 #`UNITID Unique identification number of the institution`
 
-comparison_table$`Proportion of reps voting in favor of respect for marriage act` <- 100*as.numeric(comparison_table$`Proportion of reps voting in favor of respect for marriage act`)
-comparison_table$`Proportion of reps voting in favor of respect for right to contraception act` <- 100*as.numeric(comparison_table$`Proportion of reps voting in favor of respect for right to contraception act`)
-
 focal_focal <- subset(comparison_table, comparison_table$`UNITID Unique identification number of the institution`==params$institution_id)
 focal_focal <- focal_focal[order(focal_focal$`IPEDS Year`, decreasing=TRUE),]
 
@@ -127,7 +124,8 @@ try({
 					linear_fit_data$Year <- as.numeric(linear_fit_data$Year)
 					linear_fit_data$Dependent <- as.numeric(linear_fit_data$Dependent)
 					fit <- stats::lm(Dependent ~ Year, data=linear_fit_data)
-					significance <- summary(fit)$coefficients[2,4]
+					significance <- NA
+					try({significance <- summary(fit)$coefficients[2,4]}, silent=TRUE)
 					if(is.na(significance)) {
 						final_summary[row_index, col_index] <- entry
 					} else {
@@ -333,7 +331,7 @@ leaflet() %>%
 
 # Comparisons
 
-The sections below show this institution compared with others. The ones listed are ones it has identified as peers, who consider themselves peers, and/or who the federal government considers peers. If a comparison school has the same value as the focal school, its cell is grayed out. Arrows show where there is a signficant trend over time for a school. You can swipe across the table to see more of it; the focal school column is always visible.
+The sections below show this institution compared with others. The ones listed are ones it has identified as peers, who consider themselves peers, and/or who the federal government considers peers. If a comparison school has the same value as the focal school, its cell is grayed out. In fields where there is a common view that higher (or lower) values are better, the best values are in <font color="blue">blue</font>, the worst values are in <font color="red">red</font>. If there isn't a sense of a particular value being better, values are shown in varying shades of <font color="green">green</font>. Arrows show where there is a signficant trend over time for a school. You can swipe across the table to see more of it; the focal school column is always visible.
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, eval=TRUE}
 index_ranked <- index_table[order(index_table$`pseudoranking`, decreasing=TRUE),]
@@ -413,9 +411,10 @@ reactable(final_summary,
 ```
 
 
-## Enrollment
+# Enrollment
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, eval=TRUE}
+#save(list=ls(), file=paste0("~/Downloads/", params$institution_id_in, "_", Sys.Date(), ".RData"))
 local_summary <- CreateColorsForInstitution(focal_category="Enrollment", final_summary=final_summary, final_summary_raw=final_summary_raw, conversion_table=conversion_table, byrow=TRUE) 
 ```
 
@@ -433,7 +432,7 @@ local_summary <- CreateColorsForInstitution(focal_category="Enrollment", final_s
   ) |> formatStyle(1:ncol(local_summary), 'vertical-align'='top')
 ```
 
-## General
+# General
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, eval=TRUE}
 local_summary <- subset(final_summary, final_summary$Category=="General") |> dplyr::select(-Category)
@@ -448,7 +447,7 @@ local_summary <- subset(final_summary, final_summary$Category=="General") |> dpl
   ) |> formatStyle(1:ncol(local_summary), 'vertical-align'='top')
 ```
 
-## Teaching
+# Teaching
 
 Tenure track faculty are those who are eligible for tenure. This includes both pre-tenure and tenured faculty. Once faculty get tenure, they are (generally) protected from being fired for intellectual reasons, helping to ensure their freedom in teaching and research. They can still lose their positions for misconduct, financial problems, not fulfilling their duties, or other reasons. 
 
@@ -475,9 +474,9 @@ local_summary <- CreateColorsForInstitution(focal_category="Teaching", final_sum
   ) |> formatStyle(1:ncol(local_summary), 'vertical-align'='top')
 ```
 
-## Geography
+# Geography
 
-This has information on the location of the institution. See the [about page](about.html) for more information on what the metrics are and how they are calculated. The goal is to neutrally provide information: for example, some individuals want stringent gun control in an area, some want the opposite: the categories are meant to be descriptive. 
+This has information on the location of the institution. See the [about page](about.html) for more information on what the metrics are and how they are calculated. 
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, eval=TRUE}
 
@@ -503,13 +502,14 @@ local_summary <- subset(final_summary, final_summary$Category=="Geography") |> d
 ```
 
 
-## Financial Aid
+# Financial Aid
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, eval=TRUE}
 
 color_ramp_good <- colorRampPalette(c("red", "blue"))(101)
 color_ramp_bad <- rev(colorRampPalette(c("red", "blue"))(101))
-color_ramp_neutral <- colorRampPalette(viridisLite::mako(begin=0.3, end=0.8, n=12))(101)
+#color_ramp_neutral <- colorRampPalette(viridisLite::mako(begin=0.3, end=0.8, n=12))(101)
+color_ramp_neutral <- colorRampPalette(c("green3", "seagreen4"))(101)
 
 
 local_summary <- subset(final_summary, final_summary$Category=="Student financing") |> dplyr::select(-Category)
@@ -564,7 +564,7 @@ for (row_index in 1:nrow(local_summary)) {
 ```
 
 
-## Graduation
+# Graduation
 
 Note these are bachelors graduation rates in six years, not four (this is standard). Sample sizes can be small for some demographic groups with few individuals in a school, leading to large year-to-year fluctuations and often extreme values for those groups (if there are two individuals in the class with a given identity, the possible graduation rates are 0%, 50%, or 100% depending on whether zero, one, or both students graduate within six years). 
 
@@ -604,7 +604,7 @@ for(col_index in 2:ncol(local_summary)) {
   ) |> formatStyle(1:ncol(local_summary), 'vertical-align'='top')
 ```
 
-## Library
+# Library
 
 Libraries are changing rapidly. Note that how institutions count digital collections may vary.
 
@@ -670,7 +670,7 @@ Following the practice of the census, the index is multiplied by 100 to give the
 
 These numbers are based on the most recent year available, generally `r most_current_info['IPEDS Year']`, which predates effects of the US Supreme Court's striking down of [affirmative action](https://en.wikipedia.org/wiki/Affirmative_action). This has often [changed](https://www.insidehighered.com/news/admissions/traditional-age/2024/09/06/early-look-racial-diversity-post-affirmative-action), sometimes dramatically, the incoming student demographics at some institutions.
 
-## Overall diversity
+# Overall diversity
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, eval=TRUE}
 local_summary <- subset(final_summary, final_summary$Category=="Diversity") |> dplyr::select(-Category)
@@ -703,7 +703,7 @@ for(col_index in 2:ncol(local_summary)) {
   ) |> formatStyle(1:ncol(local_summary), 'vertical-align'='top')
 ```
 
-## Freshman profile
+# Freshman profile
 
 Demographic data for first time degree-seeking students. Note that this uses US federal demographic data: it only has two genders and a specified set of ethnicities and races.
 
@@ -779,7 +779,7 @@ for (row_index in 1:nrow(local_summary)) {
 ```
 
 
-## Freshman geography
+# Freshman geography
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, eval=TRUE}
 local_summary <- CreateColorsForInstitution(focal_category="IncomingStatesCounts", final_summary=final_summary, final_summary_raw=final_summary_raw, conversion_table=conversion_table, byrow=TRUE, dosort=TRUE) 
@@ -804,7 +804,9 @@ local_summary <- subset(final_summary, final_summary$Category=="IncomingStatesCo
 
 local_summary_raw <- subset(final_summary_raw, final_summary_raw$Category=="IncomingStatesCounts") |> dplyr::select(-Category)
 
-color_ramp_neutral <- colorRampPalette(viridisLite::mako(begin=0.3, end=0.8, n=12))(101)
+#color_ramp_neutral <- colorRampPalette(viridisLite::mako(begin=0.3, end=0.8, n=12))(101)
+color_ramp_neutral <- colorRampPalette(c("green3", "seagreen4"))(101)
+
 
 raw_distribution <- as.numeric(as.matrix(local_summary_raw[, 2:ncol(local_summary)]))
 raw_distribution <- raw_distribution[!is.na(raw_distribution)]
@@ -850,7 +852,7 @@ for (row_index in 1:nrow(local_summary)) {
 
 # Test scores
 
-## SAT scores
+# SAT scores
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, eval=TRUE}
 #local_summary <- subset(final_summary, final_summary$Category=="SAT scores") |> dplyr::select(-Category)
@@ -869,7 +871,7 @@ local_summary <- CreateColorsForInstitution(focal_category="SAT scores", final_s
   ) |> formatStyle(1:ncol(local_summary), 'vertical-align'='top')
 ```
 
-## ACT scores
+# ACT scores
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, eval=TRUE}
 #local_summary <- subset(final_summary, final_summary$Category=="ACT scores") |> dplyr::select(-Category)
@@ -920,7 +922,7 @@ colnames(scorecard_field_local) <- gsub("W M", "W:M", colnames(scorecard_field_l
 
 This presents information on the number of majors and the median earnings one and five years after graduation for people who got a degree from this institution in that field. The earnings are for those who are working and not enrolled in further education. The earnings data (from the federal college scorecard) also has information on earnings for those categorized as 'MALE' and 'NOMALE' -- for readability, these are recategorized here as "Men" and "Women", respectively, which adopts the gender binary used in other federal data. "W/M earnings ratio" is the median earnings of women divided by men, as a percentage.
 
-## Bachelors
+# Bachelors
 
 ```{r, eval=TRUE}
 	b_majors <- subset(majors, Degree=="Bachelors")
@@ -947,7 +949,7 @@ This presents information on the number of majors and the median earnings one an
 	}
 ```	
 
-## Masters
+# Masters
 
 ```{r, eval=TRUE}
 	m_majors <- subset(majors, Degree=="Masters")
@@ -974,7 +976,7 @@ This presents information on the number of majors and the median earnings one an
 	}
 ```
 
-## Doctorate
+# Doctorate
 
 ```{r, eval=TRUE}
 	d_majors <- subset(majors, Degree=="Doctorate")
@@ -1001,7 +1003,7 @@ This presents information on the number of majors and the median earnings one an
 	}
 ```
 
-## Certificate
+# Certificate
 
 ```{r, eval=TRUE}
 	c_majors <- subset(majors, Degree=="Certificate")
@@ -1028,7 +1030,7 @@ This presents information on the number of majors and the median earnings one an
 	}
 ```
 
-## Associates
+# Associates
 
 ```{r, eval=TRUE}
 	a_majors <- subset(majors, Degree=="Associates")
