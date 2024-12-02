@@ -10,5 +10,7 @@ navbar:
       href: fields_overview.html
     - text: "Earnings"
       href: earnings_overview.html
+    - text: "Predict"
+      href: predict.html
 output_dir: "docs"
 

@@ -1840,6 +1840,12 @@ RenderIndexPageEtAl <- function(pages, index_table, yml, CIPS_codes, comparison_
 		quiet=FALSE
 	)
 	
+	rmarkdown::render(
+		input="_predict.Rmd", 
+		output_file="docs/predict.html", 
+		quiet=FALSE
+	)
+	
 	# rmarkdown::render(
 	# 	input="_fields_overview_OLD.Rmd", 
 	# 	output_file="docs/fields_overview.html", 
@@ -3225,7 +3231,8 @@ CreateColorsForInstitution <- function(focal_category, final_summary, final_summ
 	return(local_summary)	
 }
 
-ImputePopulationForPrediction <- function(comparison_table, fields_and_majors, CIPS_codes) {
+#pop_size_multiplier makes the population of each college larger to avoid small sample size issues while maintaining relative sizes
+ImputePopulationForPrediction <- function(comparison_table, fields_and_majors, CIPS_codes, pop_size_multiplier=10) {
 	comparison_table <- comparison_table[order(comparison_table$`IPEDS Year`, decreasing=TRUE),]
 	comparison_table_present <- subset(comparison_table, `IPEDS Year`==max(comparison_table$`IPEDS Year`, na.rm=TRUE))
 	
@@ -3240,6 +3247,9 @@ ImputePopulationForPrediction <- function(comparison_table, fields_and_majors, C
 		try({ # handling rare errors for colleges with very little info
 			focal_focal <- subset(comparison_table, `UNITID Unique identification number of the institution`==unitid)
 			focal_completions <- subset(completions_with_percentage, UNITID==unitid)
+			if(nrow(focal_completions)==0) {
+				next
+			}
 			
 			focal_completions <- left_join(focal_completions, CIPS_codes, by=c("Field"="CIPTitle"))
 			
@@ -3247,10 +3257,29 @@ ImputePopulationForPrediction <- function(comparison_table, fields_and_majors, C
 			population <- most_current_info[ grepl("FirstYearFullTimeDegreeSeekingUndergrads", names(most_current_info))]
 			population <- population[!grepl("total|percent|Index|ender", names(population))]
 			names(population) <- gsub("FirstYearFullTimeDegreeSeekingUndergrads ", "", names(population))
-			population <- population[!is.na(population)]
+			
+			graduation_rate <- most_current_info[grepl("Graduation Rate Bachelors in within 150 percent of normal time", names(most_current_info))]
+			names(graduation_rate) <- gsub("Graduation Rate Bachelors in within 150 percent of normal time ", "", names(graduation_rate))
+			
+			names(graduation_rate) <- gsub("U S Nonresident", "Nonresident alien", names(graduation_rate))
+			
+			graduating_population <- pop_size_multiplier*as.numeric(population)
+			names(graduating_population) <- names(population)
+			
+			for (population_index in sequence(length(population))) {
+				focal_name <- names(population)[population_index]
+				graduation_rate_focal <- graduation_rate[focal_name]
+				graduating_population[population_index] <- 0.01*as.numeric(population[population_index])*as.numeric(graduation_rate_focal)
+			}
+			
+			graduating_population <- round(graduating_population[!is.nan(graduating_population)])
+			graduating_population <- graduating_population[!is.na(graduating_population)]
+			if(length(graduating_population)==0) {
+				next
+			}
 			all_ethnicities <- c()
-			for (i in sequence(length(population)) ) {
-				try({all_ethnicities <- c(all_ethnicities, rep(names(population)[i], as.numeric(population[i])))}, silent=TRUE)
+			for (i in sequence(length(graduating_population)) ) {
+				try({all_ethnicities <- c(all_ethnicities, rep(names(graduating_population)[i], as.numeric(graduating_population[i])))}, silent=TRUE)
 			}
 			simulated_table <- data.frame(
 				UNITID=unitid,
@@ -3357,4 +3386,9 @@ SaveNameMatchFile <- function(comparison_table) {
 	namematch_table <- comparison_table |> dplyr::select(`UNITID Unique identification number of the institution`, `Institution entity name`)	
 	namematch_table <- namematch_table[!duplicated(namematch_table$`UNITID Unique identification number of the institution`),]
 	save(namematch_table, file="predict_shiny/namematch_table.rda")
+	return(namematch_table)
+}
+
+ExportShiny <- function(namematch_table, prediction_file) {
+	shinylive::export("predict_shiny", destdir="docs/predict", overwrite=TRUE)	
 }

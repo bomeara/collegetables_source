@@ -9,7 +9,7 @@ params:
   index_table: "nothing"
 ---
 
-This has info on several thousand colleges and universities in the US. To filter for individual schools, start typing any part of the school's name in the institution box. After clicking one, you can keep typing and add more to the list. Below the table are more filtering options.
+This has info on several thousand colleges and universities in the US. To filter for individual schools, start typing any part of the school's name in the institution box. After clicking one, you can keep typing and add more to the list. Below the table are more filtering options. This page lets you filter by characteristics of the college; you can also go to [here](predict.html) to see a tool that helps suggest colleges based on characteristics of the students who have graduated from them.
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE, asis=TRUE}
 source("_packages.R")

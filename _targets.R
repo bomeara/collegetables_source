@@ -72,8 +72,9 @@ list(
  
  tar_target(prediction_bayes_feeder, ImputePopulationForPrediction(comparison_table, fields_and_majors, CIPS_codes)),
  tar_target(prediction_bayes_model, PredictionModel(prediction_bayes_feeder)),
- tar_target(render_prediction, RenderPredictionPage(prediction_bayes_model)),
+ #tar_target(render_prediction, RenderPredictionPage(prediction_bayes_model)),
  tar_target(prediction_file, save(prediction_bayes_model, file='predict_shiny/prediction.rda')),
  tar_target(namematch_file_saved, SaveNameMatchFile(comparison_table))
+ #tar_target(export_shiny, ExportShiny(namematch_table, prediction_file))
 
 )

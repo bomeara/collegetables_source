@@ -16,18 +16,6 @@ load('namematch_table.rda')
 # Define UI for application that draws a histogram
 ui <- fluidPage(
     
-    # Application title
-    titlePanel("Predict college degrees"),
-    "This shows where people with some of the same demographic information and/or field interest as you gotten degrees. This is not to say that you would not thrive at schools lower on the list: most people from Florida stay in state, but that doesn't mean that U. of Alaska wouldn't be a great place for a student from Florida, just that relatively fewer get degrees there than from U. of Florida. My goal with this is to let students look at places they might not otherwise consider.",
-	
-	"Note this table is about getting degrees, not overall enrollment: some schools enroll many students but most do not graduate, so those schools show up lower than you might expect. 
-	
-	This uses information from federal data, which considers gender as only male or female and only a particular set of ethnicities. 
-	
-	Federal data only includes 25th percentile and 75th percentile SAT and ACT scores; to help you get a better idea of where you might go, I estimate a distribution based on this, but it is only an estimate.
-	
-	This uses a naive Bayesian model to estimate the probabilities. This is a fairly simple model. Most importantly, it does not take into account, or even know, about interactions between terms.",
-    
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
         sidebarPanel(
@@ -132,10 +120,11 @@ ui <- fluidPage(
                 english_act=english_act_chosen,
                 math_act=math_act_chosen
                 ), type="prob" ))
-            prediction <- prediction[order(prediction[,1], decreasing=TRUE),][sequence(100)]
+            prediction <- prediction[order(prediction[,1], decreasing=TRUE),][sequence(50)]
             prediction_df <- data.frame(School=sapply(names(prediction), ConvertUNITID_to_School, namematch_table=namematch_table), Percentage=round(100*prediction,1), UNITID=names(prediction))
-            prediction_df$School <- paste0("<a href='collegetables.info/", prediction_df$UNITID, ".html'>", prediction_df$School, "</a>")
-            prediction_df}, quoted=FALSE)
+            prediction_df$School <- paste0("<a href='http://www.collegetables.info/", prediction_df$UNITID, ".html'>", prediction_df$School, "</a>")
+            prediction_df$UNITID <- NULL
+            prediction_df}, quoted=FALSE, sanitize.text.function = function(x){x})
     }
     
     # Run the application 
