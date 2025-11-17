@@ -1,0 +1,17 @@
+---
+title: Predict
+output:
+  rmdformats::html_clean:
+    self_contained: false
+    includes:
+      in_header: GA_Script.html
+---
+
+The home page of this site lets students pick colleges by characteristics of the college. But another way is to match by characteristics of the students who have gotten degrees from the college. This can help students see where people like them in some ways have gotten degrees; it does not mean that is the only place they would thrive. For example, even if no one from Florida has graduated from a particular small school in Alaska, someone could love it there. This is more like a set of ideas from a guidance counselor meeting a student for the first time: what percentage of students with the chosen characteristics graduate from each college?
+
+This uses reported graduation rates by ethnicity and gender and freshman enrollment (using federal categories for each, which might not align with how students identify) to estimate the number of students who graduate with different backgrounds, as well as the number of bachelor degrees awarded by field. Enrollment by state and by standardized test scores are used to estimate the number of students in each college, though there is no data on how state or score correlates with graduation rate. Standardized test scores are only reported as the 25th and 75th percentile of enrolled students, so the other scores are estimated using a fitted beta distribution. Note that all of these are estimates.
+
+This will take a few moments to load.
+
+
+<iframe src="https://brianomeara.shinyapps.io/predict_shiny/" height="1700" width="800" allowfullscreen="true" allow="autoplay" data-external="1"></iframe>

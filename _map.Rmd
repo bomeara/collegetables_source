@@ -1,0 +1,278 @@
+---
+title: College Tables Map
+output:
+  rmdformats::readthedown:
+    self_contained: false
+    includes:
+      in_header: GA_Script.html
+params:
+  index_table: "nothing"
+---
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE, asis=TRUE}
+source("_packages.R")
+source("R/functions.R")
+index_table$PopupLabel <- paste0("<a href='", index_table$UNITID, ".html'>", index_table$Institution, "</a>")
+index_table$Longitude <- as.numeric(index_table$Longitude)
+index_table$Latitude <- as.numeric(index_table$Latitude)
+index_table$Category[nchar(index_table$Category)<2] <- "Not reported"
+index_table$Category[is.na(index_table$Category)] <- "Not reported"
+all_colleges <- index_table
+all_colleges <- subset(all_colleges, all_colleges$Active=="Yes")
+all_colleges$netprice <- as.numeric(all_colleges$`Average net price for students with financial aid`)
+all_colleges$percentfreshmenwomen <- as.numeric(all_colleges$`Freshmen % Female`)
+all_colleges$percentfreshmenwhite <- as.numeric(all_colleges$`Freshmen % White`)
+all_colleges$percentfreshmenblack <- as.numeric(all_colleges$`Freshmen % Black or African American`)
+all_colleges$percentfreshmenasian <- as.numeric(all_colleges$`Freshmen % Asian`)
+all_colleges$percentfreshmenamericanindian <- as.numeric(all_colleges$`Freshmen % American Indian or Alaskan Native`)
+all_colleges$percentfreshmenhispanic <- as.numeric(all_colleges$`Freshmen % Hispanic`)
+all_colleges$percentfreshmenpacificislander <- as.numeric(all_colleges$`Freshmen % Pacific Islander`)
+#all_colleges$percentcontraceptivesupport <- as.numeric(all_colleges$`State rep support for contraception`)
+#all_colleges$interracialsamesexmarriage <- as.numeric(all_colleges$`State support for interracial and same-sex marriage`)
+all_colleges$gradratesixyear <- as.numeric(all_colleges$`Grad rate in six years`)
+
+
+all_colleges <- SharedData$new(all_colleges)
+
+```
+
+
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE, asis=TRUE}
+
+index_conversions <- read.csv("data/ConversionToIndexTable.csv")
+
+
+for (focal_category in category_orderings) {
+	focal_columns <- index_conversions$Rename[index_conversions$Category==focal_category] 
+	focal_columns <- paste0("Reactable.toggleHideColumn('college-list', '", focal_columns, "')")
+	htmltools::tags$script(paste0("function toggle", tolower(gsub(" ", "_", focal_category)), "() {\n", focal_columns, "\n}", collapse = "; "))
+}
+
+
+```	
+
+
+# Map
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE}
+
+pal_percentfreshmenwomen <- colorNumeric(
+  palette = "RdYlBu",
+  domain = all_colleges$percentfreshmenwomen)
+pal_gradratesixyear <- colorNumeric(
+  palette = "Spectral",
+  domain = all_colleges$gradratesixyear)
+
+leaflet(all_colleges) %>%
+ # addTiles() %>%  
+ addProviderTiles(providers$CartoDB.Positron) %>%
+  setView(lng = -110, lat = 48, zoom = 3) %>%
+  addCircleMarkers(data = all_colleges, lng = ~Longitude, lat = ~Latitude, popup = ~PopupLabel, radius=5, fillOpacity=0.5, group="% Freshman Women", fillColor=~pal_percentfreshmenwomen(percentfreshmenwomen), stroke=FALSE) %>% 
+  addCircleMarkers(data = all_colleges, lng = ~Longitude, lat = ~Latitude, popup = ~PopupLabel, radius=5, fillOpacity=0.5, group="Graduation Rate (6 yr)", fillColor=~pal_gradratesixyear(gradratesixyear), stroke=FALSE) %>% 
+  addLayersControl(
+    overlayGroups = c("% Freshman Women", "Graduation Rate (6 yr)"),
+    options = layersControlOptions(collapsed = FALSE)
+  ) %>%
+  hideGroup("Graduation Rate (6 yr)") 
+
+  #addMarkers(data = all_colleges, lng = ~Longitude, lat = ~Latitude, popup = ~PopupLabel, clusterOptions = markerClusterOptions())
+```
+
+# More filters
+
+
+## Location
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE, asis=TRUE}
+
+
+crosstalk::filter_select("State", "State", all_colleges, ~State)
+
+crosstalk::filter_select("City", "City", all_colleges, ~City)
+
+crosstalk::filter_select("biome", "Biome", all_colleges, ~`Biome`)
+
+crosstalk::filter_slider("milestomountains", "Miles to mountains", all_colleges, "Miles to mountains")
+
+```	
+
+## College traits
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE, asis=TRUE}
+
+crosstalk::filter_select("athleticconference", "Athletic conference", all_colleges, ~`Athletic conference`)
+
+crosstalk::filter_slider("price", "Average net price", all_colleges, "netprice", min = 0, step = 1000)
+
+crosstalk::filter_slider("gradratesixyearslider", "Graduation rate (six years)", all_colleges, "gradratesixyear")
+
+crosstalk::filter_checkbox("HCBU", "HBCU", all_colleges, ~`HBCU`)
+
+crosstalk::filter_checkbox("Tribal", "Tribal College", all_colleges, ~`Tribal College`)
+
+crosstalk::filter_checkbox("Category", "Institution category", all_colleges, ~`Category`)
+
+crosstalk::filter_checkbox("type", "Institution type", all_colleges, ~`Overall type`)
+
+crosstalk::filter_checkbox("enrollment", "Full-time undergrad enrollment trend", all_colleges, ~`Full-time undergrad enrollment trend`)
+
+```	
+
+## Freshmen demographics
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE, asis=TRUE}
+
+
+crosstalk::filter_slider("percentwomen", "Percent of women in freshman class", all_colleges, "percentfreshmenwomen")
+
+crosstalk::filter_slider("percentwhite", "Percent of white students in freshman class", all_colleges, "percentfreshmenwhite")
+
+crosstalk::filter_slider("percentblack", "Percent of black students in freshman class", all_colleges, "percentfreshmenblack")
+
+crosstalk::filter_slider("percentasian", "Percent of Asian students in freshman class", all_colleges, "percentfreshmenasian")
+
+crosstalk::filter_slider("percentamericanindian", "Percent of American Indian students in freshman class", all_colleges, "percentfreshmenamericanindian")
+
+crosstalk::filter_slider("percentpacificislander", "Percent of Pacific Islander students in freshman class", all_colleges, "percentfreshmenpacificislander")
+
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=FALSE}
+
+if(nrow(all_colleges)>0) {
+	
+	index_conversions <- read.csv("data/ConversionToIndexTable.csv")
+
+	Overview <- c("Institution", index_conversions$Rename[index_conversions$Category=="Overview"])
+
+	Finances <- c("Institution", index_conversions$Rename[index_conversions$Category=="Finances"])
+	
+	Location <- c("Institution", index_conversions$Rename[index_conversions$Category=="Location"])
+	
+	Admissions <- c("Institution", index_conversions$Rename[index_conversions$Category=="Admissions"])
+	
+	Outcomes <- c("Institution", index_conversions$Rename[index_conversions$Category=="Outcomes"])
+	
+	Resources <- c("Institution", index_conversions$Rename[index_conversions$Category=="Resources"])
+	
+	Student_life <- c("Institution", index_conversions$Rename[index_conversions$Category=="Student life"])
+	
+	Freshmen_demographics <- c("Institution", index_conversions$Rename[index_conversions$Category=="Freshmen demographics"])
+	
+	Safety <- c("Institution", index_conversions$Rename[index_conversions$Category=="Safety"])
+	
+	Revenue_sources <- c("Institution", index_conversions$Rename[index_conversions$Category=="Revenue sources"])
+
+	# for (col_index in sequence(ncol(all_colleges))) {
+	# 		all_colleges[,col_index] <- gsub('$NaN', '', all_colleges[,col_index])
+	# }
+	#all_colleges$State <- state.name[match(all_colleges$State,state.abb)]
+	
+	
+	GetMatchingColumnsInOverview <- function(to_find) {
+		return(c(match( to_find, colnames(all_colleges)))	)
+	}
+
+	GetNotMatchingColumnsInOverview <- function(to_find) {
+		unmatched <- setdiff(colnames(all_colleges), unique(c(to_find)))
+		return(match(unmatched, colnames(all_colleges)))	
+	}
+	rownames(all_colleges) <- all_colleges$Institution
+	all_colleges <- 
+	datatable_output <- DT::datatable(
+		all_colleges, 
+		rownames=TRUE, 
+		escape=FALSE, 
+		extensions = c('Buttons', 'SearchPanes', 'Select'),
+		options=list(
+			dom = 'Bfrtip',
+			pageLength = 100,
+			columnDefs = list(
+						list(targets = GetMatchingColumnsInOverview(Overview), visible = TRUE),
+						list(targets = "_all", className = 'dt-center', visible = FALSE)
+						),
+			buttons = list(
+				"searchPanes",
+				list(
+					extend= "colvisGroup", 
+					text="Overview", 
+					show=c(GetMatchingColumnsInOverview(Overview)),
+					hide=GetNotMatchingColumnsInOverview(Overview)
+				),
+				list(
+					extend= "colvisGroup",
+					text="Admissions",
+					show=c(GetMatchingColumnsInOverview(Admissions)), 
+					hide=GetNotMatchingColumnsInOverview(Admissions)
+				),
+				list(
+					extend= "colvisGroup",
+					text="Location",
+					show=c(GetMatchingColumnsInOverview(Location)), 
+					hide=GetNotMatchingColumnsInOverview(Location)
+				),
+				list(
+					extend= "colvisGroup",
+					text="Outcomes",
+					show=c(GetMatchingColumnsInOverview(Outcomes)), 
+					hide=GetNotMatchingColumnsInOverview(Outcomes)
+				),
+				list(
+					extend= "colvisGroup",
+					text="Resources",
+					show=c(GetMatchingColumnsInOverview(Resources)), 
+					hide=GetNotMatchingColumnsInOverview(Resources)
+				),
+				list(
+					extend= "colvisGroup",
+					text="Student life",
+					show=c(GetMatchingColumnsInOverview(Student_life)), 
+					hide=GetNotMatchingColumnsInOverview(Student_life)
+				),
+				list(
+					extend= "colvisGroup",
+					text="Freshmen demographics",
+					show=c(GetMatchingColumnsInOverview(Freshmen_demographics)), 
+					hide=GetNotMatchingColumnsInOverview(Freshmen_demographics)
+				),
+				list(
+					extend= "colvisGroup",
+					text="Safety",
+					show=c(GetMatchingColumnsInOverview(Safety)), 
+					hide=GetNotMatchingColumnsInOverview(Safety)
+				),
+				list(
+					extend= "colvisGroup",
+					text="Finances",
+					show=c(GetMatchingColumnsInOverview(Finances)), 
+					hide=GetNotMatchingColumnsInOverview(Finances)
+				),
+				list(
+					extend= "colvisGroup",
+					text="Revenue sources",
+					show=c(GetMatchingColumnsInOverview(Revenue_sources)), 
+					hide=GetNotMatchingColumnsInOverview(Revenue_sources)
+				)
+			),
+			language = list(searchPanes = list(collapse = "Filter Rows"))
+
+		)
+	) 
+	for (focal_row in sequence(nrow(index_conversions))) {
+		if(index_conversions$Type[focal_row]=="Percent") {
+			datatable_output <- DT::formatStyle(datatable_output, columns=index_conversions$Rename[focal_row], color=DT::styleInterval(seq(from=10, to=90, by=10), viridisLite::plasma(n=10, begin=0, end=.7)), target="cell") %>% DT::formatRound(columns=index_conversions$Rename[focal_row], digits=0)
+		}
+		if(index_conversions$Type[focal_row]=="Money") {
+			datatable_output <- DT::formatCurrency(datatable_output, columns=index_conversions$Rename[focal_row], digits=0)
+
+		}
+		if(index_conversions$Type[focal_row]=="Number") {
+			datatable_output <- DT::formatRound(datatable_output, columns=index_conversions$Rename[focal_row], digits=0)
+		}
+	}
+	datatable_output
+}
+```
