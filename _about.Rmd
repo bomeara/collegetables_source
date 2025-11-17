@@ -68,6 +68,7 @@ There are two main types of pages on this site: one page for each institution (o
     - Global Mountain Biodiversity Assessment (2021) GMBA Mountain Inventory v2. GMBA-EarthEnv. doi:10.48601/earthenv-t9k2-1407.
     - Using the gmbaR package: https://github.com/GMBA-biodiversity/gmbaR
 * US Census data. **Note that this product uses the Census Bureau Data API but is not endorsed or certified by the Census Bureau.**
+* Info on classification comes from the new 2025 Carnegie classifications. 
 
 
 Made by Brian O'Meara, working as an individual parent (not as part of any employment, grant, etc.). It is hosted at https://github.com/bomeara/collegetables_source and made using the R packages knitr, tidyverse, tarchetypes, DT, usmap, ggplot2, ggrepel, plotly, leaflet, rmarkdown, htmlTable, ggbeeswarm, speciesgeocodeR, raster, viridisLite, graphics, and stats. The page is open source, so you can give [suggestions](https://forms.gle/C9D7WXaMDVrTm3Z3A) (especially for new data sources) or even fork it; just make sure to cite the original data sources. 

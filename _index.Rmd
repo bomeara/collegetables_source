@@ -33,8 +33,8 @@ all_colleges$percentfreshmenasian <- as.numeric(all_colleges$`Freshmen % Asian`)
 all_colleges$percentfreshmenamericanindian <- as.numeric(all_colleges$`Freshmen % American Indian or Alaskan Native`)
 all_colleges$percentfreshmenhispanic <- as.numeric(all_colleges$`Freshmen % Hispanic`)
 all_colleges$percentfreshmenpacificislander <- as.numeric(all_colleges$`Freshmen % Pacific Islander`)
-all_colleges$percentcontraceptivesupport <- as.numeric(all_colleges$`State rep support for contraception`)
-all_colleges$interracialsamesexmarriage <- as.numeric(all_colleges$`State support for interracial and same-sex marriage`)
+#all_colleges$percentcontraceptivesupport <- as.numeric(all_colleges$`State rep support for contraception`)
+#all_colleges$interracialsamesexmarriage <- as.numeric(all_colleges$`State support for interracial and same-sex marriage`)
 all_colleges$gradratesixyear <- as.numeric(all_colleges$`Grad rate in six years`)
 
 
@@ -338,9 +338,9 @@ crosstalk::filter_checkbox("Tribal", "Tribal College", all_colleges, ~`Tribal Co
 
 crosstalk::filter_checkbox("Category", "Institution category", all_colleges, ~`Category`)
 
-crosstalk::filter_checkbox("SizeSetting", "Size and setting", all_colleges, ~`Size and setting`)
+#crosstalk::filter_checkbox("SizeSetting", "Size and setting", all_colleges, ~`Size and setting`)
 
-crosstalk::filter_checkbox("EnrollmentProfile", "Enrollment profile", all_colleges, ~`Enrollment profile`)
+#crosstalk::filter_checkbox("EnrollmentProfile", "Enrollment profile", all_colleges, ~`Enrollment profile`)
 
 crosstalk::filter_checkbox("type", "Institution type", all_colleges, ~`Overall type`)
 

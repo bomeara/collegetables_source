@@ -26,6 +26,8 @@ img {
 }
 ```
 
+
+
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}
 knitr::opts_chunk$set(dev="png", echo=FALSE, message=FALSE, warning=FALSE, error=FALSE)
 source("_packages.R")
@@ -196,7 +198,7 @@ try({
 
 
 
-```{r}
+```{r, eval=FALSE}
 try({
 	if(most_current_info['State'] == "Florida") {
 		notes <- append(notes, '"Florida is openly hostile toward African Americans, people of color and LGBTQ+ individuals. Before traveling to Florida, please understand that the state of Florida devalues and marginalizes the contributions of, and the challenges faced by African Americans and other communities of color" according to an [NAACP travel advisory](https://naacp.org/articles/naacp-issues-travel-advisory-florida) of May 20, 2023.')
@@ -259,7 +261,7 @@ most_current_info['Degrees offered'] <- paste(degrees_cleaned[most_current_degre
 ```{r}
 try({
 	if(index_focal_vector['Full-time undergrad enrollment trend']=="Decreasing") {
-		notes <- append(notes, "This institution's full-time undergraduate enrollment has tended to decrease over time.")
+		notes <- append(notes, "This institution's full-time undergraduate <a href='#enrollment'>enrollment</a> has tended to decrease over time.")
 	} else if(index_focal_vector['Full-time undergrad enrollment trend']=="") {
 		notes <- append(notes, "There is insufficient data to determine whether this institution's full-time undergraduate enrollment has tended to increase or decrease over time.")
 	}
@@ -280,9 +282,9 @@ try({
 ```
 
 
-```{r, results='asis'}
+```{r, results='asis', eval=FALSE}
 if(length(notes)>0) {
-	cat("# Notes\nThese are items that bear looking into more closely.\n\n")
+	cat("# Notes\nThese are items that bear looking into more closely; they are not necessarily 'good' or 'bad'.\n\n")
 	for (note in notes) {
 		cat(paste0('* ', note, "\n\n"))	
 	}	
@@ -319,6 +321,70 @@ This, and the rest of the page, use info from the most recent year available, ge
 * **Advanced placement (AP) credits used**: `r most_current_info['Advanced placement AP credits']`
 
 `r ifelse(most_current_info['Percent indicator of undergraduates formally registered as students with disabilities']=="More than 3 percent", paste0("* **Disabilities**: ", most_current_info['Percent of undergraduates who are formally registered as students with disabilities when percentage is more than 3 percent'], " percent of undergrads are registered as having disabilities.\n"), paste0("* **Disabilities**: ", most_current_info['Percent indicator of undergraduates formally registered as students with disabilities'], " of undergrads are registered as having disabilities.\n"))`
+
+# Undergrad outcomes
+
+This plot shows the outcomes for first time, full time undergraduates seeking Bachelor's degrees (if the data are available). 
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval=TRUE}
+fate_figure_string <- ""
+try({
+	fate_data <- data.frame(
+		year = most_current_info['IPEDS Year'],
+		party_short = c("Grad in 4 yr", "Grad in 4.1-6 yr", "Transfer", "Drop out"),
+		percentage = c(
+			as.numeric(most_current_info['Graduation Rate Bachelors in 4 years or less Grand total']),
+			as.numeric(most_current_info['Graduation Rate Bachelors in within 150 percent of normal time Grand total']) - as.numeric(most_current_info['Graduation Rate Bachelors in 4 years or less Grand total']),
+			as.numeric(most_current_info['Graduation Rate Transfer out of bachelors Grand total']),
+			100 - as.numeric(most_current_info['Graduation Rate Bachelors in within 150 percent of normal time Grand total']) - as.numeric(most_current_info['Graduation Rate Transfer out of bachelors Grand total'])
+		),
+		colour = c("deepskyblue", "dodgerblue", "khaki3", "red"),
+		government = -1+sequence(4)
+	)
+	fate_data$party_long <- paste0(fate_data$party_short, " (", round(fate_data$percentage,1), "%)")
+	if(is.na(fate_data$percentage[3])) {
+		fate_data <- fate_data[-4,]	
+		fate_data$percentage[3] <- 100 - sum(fate_data$percentage[1:2])
+		fate_data$colour[3] <- "red"
+		fate_data$party_short[3] <- "Drop out or transfer"
+		fate_data$party_long[3] <- paste0(fate_data$party_short[3], " (", formatMe(fate_data$percentage[3],1), "%)")
+	}
+	scaling <- min(1000, max(300, sqrt(as.numeric(most_current_info['AllUndergrads Grand total']))))
+	#scaling <- as.numeric(most_current_info['AllUndergrads Grand total'])
+	fate_data$seats <- round(scaling*fate_data$percentage/100)
+	fate_data_reformat <- ggparliament::parliament_data(election_data = fate_data,
+  		type = "semicircle",
+  		parl_rows = floor(scaling/25),
+  		party_seats = fate_data$seats
+	)
+	p_parliament <- ggplot(fate_data_reformat, aes(x, y, colour = party_long)) +
+  geom_parliament_seats() + 
+  theme_ggparliament() +
+  #other aesthetics
+  labs(colour = NULL, 
+       title = paste0(unname(most_current_info['Institution entity name']), " undergrad outcomes")) +
+  scale_colour_manual(values = fate_data_reformat$colour, 
+                      limits = fate_data_reformat$party_long) 
+	fate_filename_png <- paste0("images/", utils::URLencode(gsub(" ", "", params$institution_id)), "_ug_fate", ".png")
+
+	
+	suppressWarnings(suppressMessages({
+		ggsave(
+			plot = p_parliament,
+			filename = paste0('docs/', fate_filename_png),
+			bg = "transparent",
+			width = params$spark_width*12,
+			height= params$spark_height*15,
+			units = "px"
+		)
+	}))
+	fate_figure_string <- paste0('<img src=', fate_filename_png, ' alt="Parliament plot showing the outcomes for full time undergraduates">')
+	
+}, silent=TRUE)
+```
+
+`r fate_figure_string`
+
 
 # Map
 
@@ -412,6 +478,35 @@ reactable(final_summary,
 
 
 # Enrollment
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, eval=TRUE}
+enrollment_data <- focal_focal[,c('IPEDS Year', 'AllUndergrads Grand total')]
+colnames(enrollment_data) <- c("Year", "Full time undergrad enrollment")
+enrollment_data$Year <- as.numeric(enrollment_data$Year)
+enrollment_data$`Full time undergrad enrollment` <- as.numeric(enrollment_data$`Full time undergrad enrollment`)
+enrollment_data <- enrollment_data[!is.na(enrollment_data$`Full time undergrad enrollment`),]
+if(nrow(enrollment_data)>1) {
+	enrollment_filename_png <- paste0("images/", utils::URLencode(gsub(" ", "", params$institution_id)), "_enrollment", ".png")
+
+	p <- ggplot(enrollment_data, aes(x=Year, y=`Full time undergrad enrollment`)) + geom_point() + geom_line() + theme_minimal() + labs(y="Full time undergrad enrollment", x="Year") 
+	
+	suppressWarnings(suppressMessages({
+		ggsave(
+			plot = p,
+			filename = paste0('docs/', enrollment_filename_png),
+			bg = "transparent",
+			width = params$spark_width*15,
+			height= params$spark_height*15,
+			units = "px"
+		)
+	}))
+	figure_string <- paste0('<img src=', enrollment_filename_png, ' alt="Line plot showing the the full time undergraduate enrollment over time">')
+} else {
+	figure_string <- ""
+}
+```
+
+`r figure_string`
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, eval=TRUE}
 #save(list=ls(), file=paste0("~/Downloads/", params$institution_id_in, "_", Sys.Date(), ".RData"))
@@ -1030,6 +1125,9 @@ This presents information on the number of majors and the median earnings one an
 	}
 ```
 
+
+
+
 # Associates
 
 ```{r, eval=TRUE}
@@ -1057,3 +1155,47 @@ This presents information on the number of majors and the median earnings one an
 	}
 ```
 
+
+# Demographic cliff
+
+There is a concern that giving changing US demographics, the number of students in the age groups who most commonly attend four year colleges will drop off, decreasing overall enrollment. This is often referred to as the ["demographic cliff"](https://www.chronicle.com/article/will-your-college-survive-the-demographic-cliff?sra=true&cid=gen_sign_in), and it can be a concern for colleges concerned about the risk of falling enrollment. For this section, the analysis uses US census data on the number of people in each state by age, and the proportion of students that come from each state for this particular college, to crudely model what will happen if everything remains constant except the demographic change in the population of 18 year olds in each year -- it does not account for things like the college increasing its admission rate, attracting more students from states without the same demographic changes or from other countries, or changes in the proportion of students who go to college.
+
+```{r, eval=TRUE}
+
+
+
+number_by_age_df <- data.frame()
+for (focal_state in unique(population_by_state_by_age$State)) {
+	for (focal_age in seq(from=18, to=0, by=-1)) {
+		count_students <- NA
+		column_to_find <- paste0('Percentage of all 18 year olds in the focal state enrolling in this college from ', focal_state)
+		try(count_students <- 0.01 * as.numeric(most_current_info[column_to_find]) * population_by_state_by_age[population_by_state_by_age$State==focal_state & population_by_state_by_age$Age==focal_age, 'Population'])
+		number_by_age_df <- rbind(number_by_age_df, data.frame(State=focal_state, Age=focal_age, Year=18-focal_age, Number=count_students))
+	}
+}
+age_alone_df <- number_by_age_df %>% group_by(Age, Year) %>% summarize(Population=sum(Population))
+current_population <- subset(age_alone_df, Year==0)$Population
+final_population_percent <- round(100*subset(age_alone_df, Year==18)$Population/current_population)
+number_by_age_df$PopulationPercentage <- 100*number_by_age_df$Population / current_population 
+p <- ggplot(number_by_age_df, aes(x=Year, y=PopulationPercentage, fill=State)) + geom_area() + guides(fill='none') + labs(x="Years in the future", y="Percentage of current college US population", title=paste0("US enrollment if trends continue is ", final_population_percent, "% of current US enrollment")) + theme(legend.position="none") + geom_text(data=number_by_age_df[number_by_age_df$Age==9,], aes(x=Year, y=PopulationPercentage, label=State), size=3, position = position_stack(vjust = 0.5),check_overlap = TRUE, color="white") 
+
+cliff_filename_png <- paste0("images/", utils::URLencode(gsub(" ", "", params$institution_id)), "_demographic_cliff", ".png")
+
+suppressWarnings(suppressMessages({
+	ggsave(
+		plot = p,
+		filename = paste0('docs/', cliff_filename_png),
+		bg = "transparent",
+		width = params$spark_width*15,
+		height= params$spark_height*30,
+		units = "px"
+	)
+}))
+
+figure_string <- paste0('<img src=', cliff_filename_png, ' alt="Stacked area plot showing trends if enrollment of 18 year olds per state stay constant; it will be ', final_population_percent, 'percent of the current population.">')
+if(is.na(final_population_percent)) {
+	figure_string <- ""
+}
+```
+
+`r figure_string`

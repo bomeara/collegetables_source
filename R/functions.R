@@ -48,7 +48,7 @@ GetIPEDSNames <- function() {
   return(IPEDS_names)
 }
 
-GetIPEDSDirectly <- function(years=as.numeric(format(Sys.Date(), "%Y")):2012, IPEDS_names = GetIPEDSNames()) {
+GetIPEDSDirectly <- function(years=as.numeric(format(Sys.Date(), "%Y")):2014, IPEDS_names = GetIPEDSNames()) {
 	print("Starting GetIPEDSDirectly")
 	finished_downloads <- c()
   # Get IPEDS data directly from the IPEDS website
@@ -77,7 +77,7 @@ GetIPEDSDirectly <- function(years=as.numeric(format(Sys.Date(), "%Y")):2012, IP
 			print(file.path(tempdir(), year_index, IPEDS_index))
 			unzip(temp, exdir = file.path(tempdir(), year_index, IPEDS_index))
 			potential_files <- list.files(file.path(tempdir(), year_index, IPEDS_index), pattern=".*csv", full.names = TRUE)
-			print(potential_files)
+			#print(potential_files)
 			file_to_read <- potential_files[1]
 			if (length(potential_files) > 1) {
 				for (potential_file_index in seq_along(potential_files)) {
@@ -104,10 +104,10 @@ GetIPEDSDirectly <- function(years=as.numeric(format(Sys.Date(), "%Y")):2012, IP
 			temp2 <- tempfile()
 			
 			download.file(dictionary_to_get,temp2)
-			print(file.path(tempdir(), year_index, IPEDS_index, "dict"))
+			#print(file.path(tempdir(), year_index, IPEDS_index, "dict"))
 			unzip(temp2, exdir = file.path(tempdir(), year_index, IPEDS_index, "dict"))
 			potential_files <- list.files(file.path(tempdir(), year_index, IPEDS_index, "dict"), pattern=".*xls.*", full.names = TRUE)
-			print(potential_files)
+			#print(potential_files)
 			dictionary_to_read <- potential_files[1]
 			dictionary_frequencies <- NULL
 			dictionary_variables <- NULL
@@ -124,6 +124,12 @@ GetIPEDSDirectly <- function(years=as.numeric(format(Sys.Date(), "%Y")):2012, IP
 			# Ok, now we have the raw data and the dictionary. Let's convert the raw data to be more sensible
 			try({
 				#print(object.size(x=lapply(ls(), get)), units="Gb")
+				colnames(dictionary_frequencies) <- tolower(colnames(dictionary_frequencies))
+			})
+			try({
+				colnames(dictionary_variables) <- tolower(colnames(dictionary_variables))
+			})
+			try({
 				unique_varnames_to_encode <- unique(dictionary_frequencies$varname)
 				for (varname_index in seq_along(unique_varnames_to_encode)) {
 					focal_freq <- subset(dictionary_frequencies, varname == unique_varnames_to_encode[varname_index])
@@ -147,7 +153,7 @@ GetIPEDSDirectly <- function(years=as.numeric(format(Sys.Date(), "%Y")):2012, IP
 			for (col_index in sequence(ncol(local_data))) {
 				matching <- match(colnames(local_data)[col_index],dictionary_variables$varname)
 				if(!is.na(matching)) {
-					colnames(local_data)[col_index] <- paste0(colnames(local_data)[col_index], " ", dictionary_variables$varTitle[matching])
+					colnames(local_data)[col_index] <- paste0(colnames(local_data)[col_index], " ", dictionary_variables$vartitle[matching])
 				}
 			}
 			local_data <- local_data[colSums(!is.na(local_data)) > 0]
@@ -220,8 +226,10 @@ GetIPEDSDirectly <- function(years=as.numeric(format(Sys.Date(), "%Y")):2012, IP
 } 
 
 # Idea here is one table to rule them all with all the info we want to compare between schools. 
-CreateComparisonTables <- function(ipeds_direct_and_db, exclude_no_degrees=TRUE) { 
+CreateComparisonTablesPart1 <- function(ipeds_direct_and_db, exclude_no_degrees=TRUE) { 
 	db <- dbConnect(RSQLite::SQLite(), "data/db_IPEDS.sqlite")
+	print("Starting CreateComparisonTables")
+	# Get the data from the database
 	comparison_table <- tbl(db, "Institutional_directory") %>% dplyr::select(c(
 		"UNITID.Unique.identification.number.of.the.institution",
 		"HDzzzz.INSTNM.Institution..entity..name",
@@ -270,6 +278,13 @@ CreateComparisonTables <- function(ipeds_direct_and_db, exclude_no_degrees=TRUE)
 		"HDzzzz.C21UGPRF.Carnegie.Classification.2021..Undergraduate.Profile",
 		"HDzzzz.C21ENPRF.Carnegie.Classification.2021..Enrollment.Profile",
 		"HDzzzz.C21SZSET.Carnegie.Classification.2021..Size.and.Setting",
+		"HDzzzz.CARNEGIEIC.Carnegie.Classification.2025..Institutional.Classification",
+		"HDzzzz.CARNEGIESAEC.Carnegie.Classification.2025..Student.Access.and.Earnings",
+		"HDzzzz.CARNEGIERSCH.Carnegie.Classification.2025...Research.Activity.Designation",
+		"HDzzzz.CARNEGIESIZE.Carnegie.Classification.2025..Institutional.Size",
+		"HDzzzz.CARNEGIEALF.Carnegie.Classification.2025..Award.Level.Focus",
+		"HDzzzz.CARNEGIEAPM.Carnegie.Classification.2025..Undergraduate.Academic.Program.Mix",
+ 		"HDzzzz.CARNEGIEGPM.Carnegie.Classification.2025..Graduate.Academic.Program.Mix",
 		"HDzzzz.LANDGRNT.Land.Grant.Institution",
 		"HDzzzz.INSTSIZE.Institution.size.category",
 		"HDzzzz.F1SYSTYP.Multi.institution.or.multi.campus.organization",
@@ -290,8 +305,23 @@ CreateComparisonTables <- function(ipeds_direct_and_db, exclude_no_degrees=TRUE)
 		"HDzzzz.OBEREG.Geographic.region"
 	)) %>% as.data.frame() 
 	
+	comparison_table$`HDzzzz.CARNEGIESAECACCESSS.Carnegie.Classification.2025..Student.Access` <- NA
+	comparison_table$`HDzzzz.CARNEGIESAECACCESSS.Carnegie.Classification.2025..Student.Access`[grepl("Higher Access", comparison_table$`HDzzzz.CARNEGIESAEC.Carnegie.Classification.2025..Student.Access.and.Earnings`)] <- "Higher Access"
+	comparison_table$`HDzzzz.CARNEGIESAECACCESSS.Carnegie.Classification.2025..Student.Access`[grepl("Lower Access", comparison_table$`HDzzzz.CARNEGIESAEC.Carnegie.Classification.2025..Student.Access.and.Earnings`)] <- "Lower Access"
+	
+	comparison_table$`HDzzzz.CARNEGIESAECEARNINGS.Carnegie.Classification.2025..Student.Earnings` <- NA
+	comparison_table$`HDzzzz.CARNEGIESAECEARNINGS.Carnegie.Classification.2025..Student.Earnings`[grepl("Higher Earnings", comparison_table$`HDzzzz.CARNEGIESAEC.Carnegie.Classification.2025..Student.Access.and.Earnings`)] <- "Higher Earnings"
+	comparison_table$`HDzzzz.CARNEGIESAECEARNINGS.Carnegie.Classification.2025..Student.Earnings`[grepl("Medium Earnings", comparison_table$`HDzzzz.CARNEGIESAEC.Carnegie.Classification.2025..Student.Access.and.Earnings`)] <- "Medium Earnings"
+	comparison_table$`HDzzzz.CARNEGIESAECEARNINGS.Carnegie.Classification.2025..Student.Earnings`[grepl("Lower Earnings", comparison_table$`HDzzzz.CARNEGIESAEC.Carnegie.Classification.2025..Student.Access.and.Earnings`)] <- "Lower Earnings"
+	
+
+	
+	print("Got the institutional directory")
+	
 	comparison_table$`HDzzzz.DFRCGID.Data.Feedback.Report.comparison.group.created.by.NCES`[is.na(comparison_table$`HDzzzz.DFRCGID.Data.Feedback.Report.comparison.group.created.by.NCES`)] <- comparison_table$`HDzzzz.DFRCGID.Data.Feedback.Report.comparison.group.category.created.by.NCES`[is.na(comparison_table$`HDzzzz.DFRCGID.Data.Feedback.Report.comparison.group.created.by.NCES`)]
 	comparison_table <- comparison_table %>% dplyr::select(-`HDzzzz.DFRCGID.Data.Feedback.Report.comparison.group.category.created.by.NCES`)
+	
+	print("Starting getting enrollment undergrad")
 	
 	enrollment_undergrad <- tbl(db, "Enrollment_age") %>% dplyr::filter(EFzzzzB.LSTUDY.Level.of.student=="Undergraduate" & EFzzzzB.LINE.Original.line.number.on.survey.form=="Undergraduate, total") %>% dplyr::select(c(
 		"UNITID.Unique.identification.number.of.the.institution",
@@ -303,6 +333,7 @@ CreateComparisonTables <- function(ipeds_direct_and_db, exclude_no_degrees=TRUE)
 		Undergrad.part.time = "EFzzzzB.EFAGE06.Part.time.total"
 	)) %>% as.data.frame()  #  EFzzzzB.EFAGE05.Full.time.total for full time undergraduates
 
+	print("Starting getting enrollment grad")
 
 	enrollment_grad <- tbl(db, "Enrollment_age") %>% dplyr::filter(EFzzzzB.LSTUDY.Level.of.student=="Graduate" & EFzzzzB.EFBAGE.Age.category=='All age categories total') %>% dplyr::select(c(
 		"UNITID.Unique.identification.number.of.the.institution",
@@ -317,9 +348,15 @@ CreateComparisonTables <- function(ipeds_direct_and_db, exclude_no_degrees=TRUE)
 	comparison_table <- dplyr::left_join(comparison_table, enrollment_undergrad, by=c("UNITID.Unique.identification.number.of.the.institution", "IPEDS.Year"))
 	comparison_table <- dplyr::left_join(comparison_table, enrollment_grad, by=c("UNITID.Unique.identification.number.of.the.institution", "IPEDS.Year"))
 	
+	print("Starting getting admissions")
+	
 	admissions <- tbl(db, "Admissions") %>% as.data.frame()
 	
+	print("Starting join after admissions")
+	
 	comparison_table <- dplyr::left_join(comparison_table, admissions, by=c("UNITID.Unique.identification.number.of.the.institution", "IPEDS.Year"))
+	
+	print("Getting enrollment residence")
 	
 	enrollment_residence <- tbl(db, "Enrollment_residence") %>% dplyr::select(c(
 		"UNITID.Unique.identification.number.of.the.institution",
@@ -328,10 +365,15 @@ CreateComparisonTables <- function(ipeds_direct_and_db, exclude_no_degrees=TRUE)
 		"IPEDS.Year"
 	)) %>% dplyr::filter(`EFzzzzC.EFCSTATE.State.of.residence.when.student.was.first.admitted` != 'All first-time degree/certificate seeking undergraduates, total') %>% dplyr::filter(`EFzzzzC.EFCSTATE.State.of.residence.when.student.was.first.admitted` != 'z') %>% as.data.frame()
 	
+	print("Pivoting enrollment residence")
+	
 	enrollment_residence_wider <- enrollment_residence %>% pivot_wider(id_cols=c("UNITID.Unique.identification.number.of.the.institution", "IPEDS.Year"), names_from='EFzzzzC.EFCSTATE.State.of.residence.when.student.was.first.admitted', values_from='EFzzzzC.EFRES01.First.time.degree.certificate.seeking.undergraduate.students') %>% as.data.frame()
 	enrollment_residence_wider[is.na(enrollment_residence_wider)] <- 0
 	colnames(enrollment_residence_wider)[-c(1:2)] <- paste0("First year students from ", colnames(enrollment_residence_wider)[-c(1:2)])
 	
+	print("Joining enrollment residence")
+	
+
 	comparison_table <- dplyr::left_join(comparison_table, enrollment_residence_wider, by=c("UNITID.Unique.identification.number.of.the.institution", "IPEDS.Year"))
 	
 	# pops_by_state <- GetPopulationByStateAtAge18()
@@ -344,7 +386,7 @@ CreateComparisonTables <- function(ipeds_direct_and_db, exclude_no_degrees=TRUE)
 
 	# finance
 	
-	
+	print("Starting finance")	
 
 	finance_fasb <- tbl(db, "Finance_FASB") %>% as.data.frame() 
 	colnames(finance_fasb) <- gsub("^[A-z0-9_]+\\.[A-Z0-9]+\\.", "", colnames(finance_fasb))
@@ -395,6 +437,8 @@ CreateComparisonTables <- function(ipeds_direct_and_db, exclude_no_degrees=TRUE)
 		finance_fasb[,col_index] <- as.numeric(finance_fasb[,col_index])
 	}
 	finance_fasb$`Private.gifts..grants..and.contracts` <- as.numeric(finance_fasb$`Private.gifts...Total`) + as.numeric(finance_fasb$`Private.grants.and.contracts...Total`)
+	
+	print("Starting finance GASB")
 	
 	finance_gasb <- tbl(db, "Finance_GASB") %>% as.data.frame()
 	colnames(finance_gasb) <- gsub("^[A-z0-9_]+\\.[A-Z0-9]+\\.", "", colnames(finance_gasb))
@@ -465,6 +509,8 @@ CreateComparisonTables <- function(ipeds_direct_and_db, exclude_no_degrees=TRUE)
 	finance_gasb$"Local.government.and.contracts" <- finance_gasb$"Local.private.operating.grants.and.contracts" + finance_gasb$"Local.nonoperating.grants"
 	finance_gasb$"Private.grants.and.contracts" <- finance_gasb$"Private.operating.grants.and.contracts" + finance_gasb$"Gifts..including.contributions.from.affiliated.organizations"
 	
+	print("Starting finance for profit")
+	
 	finance_forprofit <- tbl(db, "Finance_ForProfits") %>% as.data.frame()
 	colnames(finance_forprofit) <- gsub("^[A-z0-9_]+\\.[A-Z0-9]+\\.", "", colnames(finance_forprofit))
 	finance_forprofit <- finance_forprofit %>% FixDuplicateColnames() %>% dplyr::select(c(
@@ -508,7 +554,11 @@ CreateComparisonTables <- function(ipeds_direct_and_db, exclude_no_degrees=TRUE)
 	
 	finance <- dplyr::bind_rows(FixDuplicateColnames(finance_fasb), FixDuplicateColnames(finance_gasb), FixDuplicateColnames(finance_forprofit))
 	
+	print("Starting join after finance")
+	
 	comparison_table <- dplyr::left_join(comparison_table, finance, by=c("UNITID.Unique.identification.number.of.the.institution", "IPEDS.Year"))
+	
+	print("Starting getting student aid")
 
 	student_aid_core <- tbl(db, "Student_aid") %>% dplyr::select(contains(c(
 		"UNITID.Unique.identification.number.of.the.institution",
@@ -542,24 +592,45 @@ CreateComparisonTables <- function(ipeds_direct_and_db, exclude_no_degrees=TRUE)
 	
 	# Get net price info
 	
-	net_price_raw <- read.csv("data/IPEDS_SFAxxyy_normal_2022.csv") %>% dplyr::select(contains(c(
+	print("Starting getting net price")
+	
+	net_price_raw <- read.csv("data/IPEDS_SFAxxyy_normal_2023.csv") %>% dplyr::select(contains(c(
 		"UNITID",
+		"NPIST2",
+		"NPIS412",
 		"NPIS422",
-		"NPT421"
+		"NPIS432",
+		"NPIS442",
+		"NPIS452"
 	))) %>% as.data.frame()
 	
 	# SINCE THIS GETS MISSED WITH THE AGGREGATION, LOAD IT IN MANUALLY
 	
-	net_price_raw[is.na(net_price_raw[,2]),2] <- net_price_raw[is.na(net_price_raw[,2]),3] #usually only one is filled in
-	net_price_raw <- net_price_raw[,c(1,2)]
-	colnames(net_price_raw) <- c("UNITID.Unique.identification.number.of.the.institution", "Average.net.price.for.30K.to.48K.family.income")
+	print("Starting getting net price manually")
 	
-	net_price_raw$IPEDS.Year <- "2022"
+	
+	
+	#net_price_raw[is.na(net_price_raw[,2]),2] <- net_price_raw[is.na(net_price_raw[,2]),3] #usually only one is filled in
+	#net_price_raw <- net_price_raw[,c(1,2)]
+	colnames(net_price_raw) <- c(
+		"UNITID.Unique.identification.number.of.the.institution", 
+		"Average.net.price.all.income", 
+		"Average.net.price.for.0.to.30K.family.income",
+		"Average.net.price.for.30K.to.48K.family.income",
+		"Average.net.price.for.48K.to.75K.family.income",
+		"Average.net.price.for.75K.to.110K.family.income",
+		"Average.net.price.for.110K.or.more.family.income"
+	)
+	
+	net_price_raw$IPEDS.Year <- "2023"
 	
 	comparison_table <- dplyr::left_join(comparison_table, net_price_raw, by=c("UNITID.Unique.identification.number.of.the.institution", "IPEDS.Year"))
 
 	
 	comparison_table <- dplyr::left_join(comparison_table, student_aid_core, by=c("UNITID.Unique.identification.number.of.the.institution", "IPEDS.Year"))
+	
+	
+	print("Starting getting student aid messy")
 	
 	student_aid_messy_years <- tbl(db, "Student_aid") %>% dplyr::select(c(
 		"UNITID.Unique.identification.number.of.the.institution",
@@ -576,6 +647,8 @@ CreateComparisonTables <- function(ipeds_direct_and_db, exclude_no_degrees=TRUE)
 	student_aid_messy_pivoted <- student_aid_messy_pivoted %>% group_by(UNITID.Unique.identification.number.of.the.institution, IPEDS.Year) %>% summarise(Average.net.price.students.awarded.grant.or.scholarship.aid = mean(Average.net.price.students.awarded.grant.or.scholarship.aid))
 	student_aid_messy_pivoted <- student_aid_messy_pivoted %>% group_by(UNITID.Unique.identification.number.of.the.institution, IPEDS.Year) %>% summarise(Average.net.price.students.awarded.grant.or.scholarship.aid = mean(Average.net.price.students.awarded.grant.or.scholarship.aid))
 	
+	print("Starting join after student aid messy")
+	
 	comparison_table <- dplyr::left_join(comparison_table, student_aid_messy_pivoted, by=c("UNITID.Unique.identification.number.of.the.institution", "IPEDS.Year"))
 	
 	academic_library <- tbl(db, "Academic_library") %>% as.data.frame()
@@ -583,6 +656,8 @@ CreateComparisonTables <- function(ipeds_direct_and_db, exclude_no_degrees=TRUE)
 	comparison_table <- dplyr::left_join(comparison_table, academic_library, by=c("UNITID.Unique.identification.number.of.the.institution", "IPEDS.Year"))
 
 	# Graduation rate 4 year institutions
+	
+	print("Starting graduation rate 4 year institutions")
 	
 	graduation_rate_four <- tbl(db, "Graduation_FourYears") %>% as.data.frame()
 	graduation_rate_four <- graduation_rate_four[grepl("Bachelor's or equiv subcohort \\(4-yr institution\\)", graduation_rate_four$GRzzzz.GRTYPE.Cohort.data),]
@@ -623,7 +698,7 @@ CreateComparisonTables <- function(ipeds_direct_and_db, exclude_no_degrees=TRUE)
 		
 	comparison_table <- dplyr::left_join(comparison_table, graduation_rate_four_cleaned, by=c("UNITID.Unique.identification.number.of.the.institution", "IPEDS.Year"))
 
-	
+	print("Starting staff tenure demographics")
 	
 
 	# Instructional staff
@@ -648,12 +723,27 @@ CreateComparisonTables <- function(ipeds_direct_and_db, exclude_no_degrees=TRUE)
 
 	# Institutional offerings
 	
+	print("Starting institutional offerings")
+	
 	institutional_offerings <- tbl(db, "Institutional_offerings") %>% dplyr::select(!contains("Enrolled")) %>% dplyr::select(!contains("Admissions")) %>% dplyr::select(!contains("Applicants")) %>% as.data.frame() %>% FixDuplicateColnames()
 	
 	comparison_table <- dplyr::left_join(comparison_table, institutional_offerings, by=c("UNITID.Unique.identification.number.of.the.institution", "IPEDS.Year"))
 	
+	dbDisconnect(db)
 	
+	if(exclude_no_degrees) {
+		comparison_table <- comparison_table[grepl("Degree", comparison_table$`HDzzzz.INSTCAT.Institutional.category`),] 
+	}
+	return(comparison_table)
+}
+
+
+CreateComparisonTablesPart2 <- function(comparison_table, ipeds_direct_and_db, exclude_no_degrees=TRUE) { 
+	db <- dbConnect(RSQLite::SQLite(), "data/db_IPEDS.sqlite")
+	print("Starting CreateComparisonTables2")
 	# Student demographics freshmen
+	
+	print("Starting student demographics freshmen")
 	
 	enrollment_race_fulltime_freshmen <- tbl(db, "Enrollment_race") %>% dplyr::filter(EFzzzzA.EFALEVEL.Level.of.student=="Full-time students, Undergraduate, Degree/certificate-seeking, First-time") %>% dplyr::select(!contains("Level")) %>% dplyr::select(!contains("Attendance")) %>% as.data.frame()
 	
@@ -671,10 +761,14 @@ CreateComparisonTables <- function(ipeds_direct_and_db, exclude_no_degrees=TRUE)
 	}
 	enrollment_race_fulltime_freshmen_percent <- enrollment_race_fulltime_freshmen_percent %>% dplyr::select(-ends_with("Grand.total"))
 	
+	print("starting join after freshmen demographics")
+	
 	comparison_table <- dplyr::left_join(comparison_table, enrollment_race_fulltime_freshmen_percent, by=c("UNITID.Unique.identification.number.of.the.institution", "IPEDS.Year"))
 
 	
 	# Student demographics all undergrads. Includes non degree seeking students, part time students, etc.
+	
+	print("Starting student demographics all undergrads")
 
 	enrollment_race_undergrads <- tbl(db, "Enrollment_race") %>% dplyr::filter(EFzzzzA.EFALEVEL.Level.of.student=="All students, Undergraduate total") %>% dplyr::select(!contains("Level")) %>% dplyr::select(!contains("Attendance")) %>% as.data.frame()
 	
@@ -696,6 +790,8 @@ CreateComparisonTables <- function(ipeds_direct_and_db, exclude_no_degrees=TRUE)
 
 
 	# Wrapup steps
+	
+	print("Starting wrapup steps")
 	
 	colnames(comparison_table) <- gsub("  ", " ", gsub('\\.', ' ', gsub("^[A-z]+\\.[A-Z0-9_]+\\.", "", colnames(comparison_table))))
 
@@ -775,6 +871,8 @@ CreateComparisonTables <- function(ipeds_direct_and_db, exclude_no_degrees=TRUE)
 		
 		comparison_table <- comparison_table[grepl("Degree", comparison_table$`Institutional category`, ignore.case=FALSE),] # Degree-granting starts all the ones giving degrees
 	}
+	
+	print("Starting to write to database")
 	
 	dbWriteTable(db,  "comparison_table", comparison_table, overwrite=TRUE)
 
@@ -1207,7 +1305,7 @@ AppendGunLaws <- function(comparison_table) {
 
 AppendAAUPCensure <- function(comparison_table) {
 	print("Appending AAUP censure data")
-	aaup <- read.csv("external_data/aaup_censure_Feb2024.csv", header=TRUE)
+	aaup <- read.csv("external_data/aaup_censure_Sept2025.csv", header=TRUE)
 	comparison_table$AAUP_Censure <- "No"
 	for (i in sequence(nrow(aaup))) {
 		matches <- which(comparison_table$"Institution entity name"==aaup[i,1])
@@ -1465,9 +1563,7 @@ GetOverviewColumns <- function(college_data) {
 		"Covid vax (employees)",
 		"Covid vax (students)",
 		"Abortion",
-		"Gun law stringency",
-		"Proportion of reps voting in favor of respect for right to contraception act",
-		"Proportion of reps voting in favor of respect for marriage act"
+		"Gun law stringency"
 		
 		
 	))
@@ -1613,45 +1709,92 @@ RenderInstitutionPagesComparison <- function(comparison_table, fields_and_majors
 
 	
 	failures <- c()
+	pb <- progress_bar$new(
+		total = length(institution_ids),
+		format = "  doing :percent eta: :eta elapsed: :elapsedfull",
+		clear = FALSE
+	)
+	
 	#for (i in seq_along(institutions)) {
 	for (i in sequence(min(maxcount, length(institution_ids)))) {
+		pb$tick()
 		failed <- TRUE
-		try({
-			institution_id <- institution_ids[i]
-			institution_name <- rownames(t(t(sort(table(comparison_table$`Institution entity name`[comparison_table$`UNITID Unique identification number of the institution` == institution_id]), decreasing=TRUE))))[1] # sometimes the name changes a bit; take the most common one		
-			print(paste0("Rendering ", institution_name, " (", i, " of ", length(institution_ids), ") with id ", institution_id))
-			
-			rmarkdown::render(
-				input="_institution_comparison.Rmd", 
-				output_file="docs/institution.html", 
-				params = list(
-					institution_name_in = institution_name,
-					institution_long_name_in = institution_name,
-					institution_id_in =  institution_id,
-					comparison_table_in = comparison_table,
-					index_table_in=index_table_original,
-					population_by_state_by_age=population_by_state_by_age,
-					college_chosen_comparison_table_in=college_chosen_comparison_table,
-					scorecard_field_organized_in=scorecard_field_organized
-				),
-				quiet=TRUE
+		try(
+			{
+				institution_id <- institution_ids[i]
+				institution_name <- rownames(t(t(sort(
+					table(comparison_table$`Institution entity name`[
+						comparison_table$`UNITID Unique identification number of the institution` ==
+							institution_id
+					]),
+					decreasing = TRUE
+				))))[1] # sometimes the name changes a bit; take the most common one
+				print(paste0(
+					"Rendering ",
+					institution_name,
+					" (",
+					i,
+					" of ",
+					length(institution_ids),
+					") with id ",
+					institution_id
+				))
+
+				rmarkdown::render(
+					input = "_institution_comparison.Rmd",
+					output_file = "docs/institution.html",
+					params = list(
+						institution_name_in = institution_name,
+						institution_long_name_in = institution_name,
+						institution_id_in = institution_id,
+						comparison_table_in = comparison_table,
+						index_table_in = index_table_original,
+						population_by_state_by_age = population_by_state_by_age,
+						college_chosen_comparison_table_in = college_chosen_comparison_table,
+						scorecard_field_organized_in = scorecard_field_organized
+					),
+					quiet = TRUE
+				)
+				Sys.sleep(1)
+				system("sed -i '' 's/&gt;/>/g' docs/institution.html") # because htmlTable doesn't escape well; the '' is a requirement of OS X's version of sed, apparently
+				system("sed -i '' 's/&lt;/</g' docs/institution.html")
+
+				Sys.sleep(1)
+
+				file.copy(
+					"docs/institution.html",
+					paste0(
+						"docs/",
+						utils::URLencode(gsub(" ", "", institution_id)),
+						".html"
+					),
+					overwrite = TRUE
+				)
+				print(paste0(
+					"docs/",
+					utils::URLencode(gsub(" ", "", institution_id)),
+					".html"
+				))
+				print(paste0(
+					"Institution ",
+					i,
+					" of ",
+					length(institution_ids),
+					" rendered, ",
+					100 * i / length(institution_ids),
+					"% complete"
+				))
+				#system(paste0("open docs/", utils::URLencode(gsub(" ", "", institution_id)), ".html"))
+				Sys.sleep(1)
+				failed <- FALSE
+			},
+			silent = TRUE
+		)
+		if (failed) {
+			failures <- c(
+				failures,
+				comparison_table$`Institution entity name`[i]
 			)
-			Sys.sleep(1)
-			system("sed -i '' 's/&gt;/>/g' docs/institution.html") # because htmlTable doesn't escape well; the '' is a requirement of OS X's version of sed, apparently
-			system("sed -i '' 's/&lt;/</g' docs/institution.html")
-			
-			Sys.sleep(1)
-
-
-			file.copy("docs/institution.html", paste0("docs/", utils::URLencode(gsub(" ", "", institution_id)), ".html"), overwrite=TRUE)
-			print(paste0("docs/", utils::URLencode(gsub(" ", "", institution_id)), ".html"))
-			print(paste0("Institution ", i, " of ", length(institution_ids), " rendered, ", 100*i/length(institution_ids), "% complete"))
-			#system(paste0("open docs/", utils::URLencode(gsub(" ", "", institution_id)), ".html"))
-			Sys.sleep(1)
-			failed <- FALSE
-		}, silent=TRUE)
-		if(failed) {
-			failures <- c(failures, comparison_table$`Institution entity name`[i])
 		}
 	}
 	return(failures)
@@ -1905,14 +2048,14 @@ RenderIndexPageEtAl <- function(pages, index_table, yml, CIPS_codes, comparison_
 	# 			quiet=FALSE
 	# )
 
-	rmarkdown::render(
-				input="_map.Rmd", 
-				output_file="docs/map.html", 
-				params = list(
-					index_table = index_table
-				),
-				quiet=TRUE
-	)	
+	# rmarkdown::render(
+	# 			input="_map.Rmd", 
+	# 			output_file="docs/map.html", 
+	# 			params = list(
+	# 				index_table = index_table
+	# 			),
+	# 			quiet=TRUE
+	# )	
 	# rmarkdown::render(
 	# 			input="degrees_by_conference.Rmd", 
 	# 			output_file="docs/degrees_by_conference.html", 
@@ -2512,6 +2655,7 @@ CreateIndexTable <- function(comparison_table) {
 	index_conversions <- read.csv("data/ConversionToIndexTable.csv")
 	index_conversions <- index_conversions[index_conversions$ColumnName!="Full-time undergrad enrollment trend",] # since that doesn't exist yet
 	index_table <- data.frame()
+	colnames(comparison_table) <- gsub("  ", " ", colnames(comparison_table))
 	for (focal_row in sequence(nrow(index_conversions))) {
 		focal_column <- comparison_table[, index_conversions$ColumnName[focal_row]]
 		if(focal_row==1) {
@@ -2651,12 +2795,12 @@ CreateIndexTable <- function(comparison_table) {
 	index_table_summary <- cbind(index_table_summary, assets_slopes)
 	colnames(index_table_summary)[ncol(index_table_summary)] <- 'Assets trend'
 	
-	index_table_summary$`State rep support for contraception` <- 100*as.numeric(index_table_summary$`State rep support for contraception`)
-	index_table_summary$`State support for interracial and same-sex marriage` <- 100*as.numeric(index_table_summary$`State support for interracial and same-sex marriage`)
+	#index_table_summary$`State rep support for contraception` <- 100*as.numeric(index_table_summary$`State rep support for contraception`)
+	#index_table_summary$`State support for interracial and same-sex marriage` <- 100*as.numeric(index_table_summary$`State support for interracial and same-sex marriage`)
 	index_table_summary$`Students can get federal financial aid`[index_table_summary$`Students can get federal financial aid` %in% c("Branch campus of a main campus that participates in Title IV", "New participants (became eligible during spring collection)", "New participants (became eligible during winter collection)", "Participates in Title IV federal financial aid programs")] <- "Yes"
 	index_table_summary$`Students can get federal financial aid`[index_table_summary$`Students can get federal financial aid` %in% c("Deferment only - limited participation", "Not currently participating in Title IV, does not have OPE ID number", "Not currently participating in Title IV, has an OPE ID number", "Stopped participating during the survey year")] <- "No"
-	index_table_summary$`California travel ban` <- ifelse(index_table_summary$`California travel ban`==TRUE, "Yes", "No")
-	index_table_summary$`California travel ban`[nchar(index_table_summary$`California travel ban`)<1] <- "No"
+	#index_table_summary$`California travel ban` <- ifelse(index_table_summary$`California travel ban`==TRUE, "Yes", "No")
+	#index_table_summary$`California travel ban`[nchar(index_table_summary$`California travel ban`)<1] <- "No"
 	index_table_summary$`Category` <- gsub(' \n', "", index_table_summary$`Category`)
 	index_table_summary$`Category`[nchar(index_table_summary$`Category`)<1] <- "Unknown"
 
@@ -2882,16 +3026,17 @@ ReplaceNAWithInf <- function(x) {
 	return(as.numeric(x))
 }
 
-GetInstitutionScorecardData <- function(focal_url='https://ed-public-download.scorecard.network/downloads/Most-Recent-Cohorts-Institution_06102024.zip') {
+GetInstitutionScorecardData <- function(focal_url='https://ed-public-download.scorecard.network/downloads/Most-Recent-Cohorts-Institution_05192025.zip') {
 	temp_dir <- tempdir()
 	destination <- paste0(temp_dir, "/scorecard_insitution.zip")
 	tryCatch(download.file(url=focal_url, destfile=destination))
 	unzip(destination, exdir=temp_dir)
-	institution_scorecard <- read.csv(paste0(temp_dir, "/Most-Recent-Cohorts-Institution.csv"), stringsAsFactors=FALSE)
+	relevant_file <- list.files(temp_dir, pattern="Most-Recent-Cohorts-Institution.*.csv", full.names=TRUE)
+	institution_scorecard <- read.csv(relevant_file, stringsAsFactors=FALSE)
 	return(institution_scorecard)
 }
 
-GetFieldOfStudyScorecardData <- function(focal_url='https://ed-public-download.scorecard.network/downloads/Most-Recent-Cohorts-Field-of-Study_06102024.zip') {
+GetFieldOfStudyScorecardData <- function(focal_url='https://ed-public-download.scorecard.network/downloads/Most-Recent-Cohorts-Field-of-Study_04172025.zip') { 
 	temp_dir <- tempdir()
 	destination <- paste0(temp_dir, "/scorecard_field.zip")
 	tryCatch(download.file(url=focal_url, destfile=destination))
@@ -2984,7 +3129,7 @@ OrganizeScorecardField <- function(scorecard_field) {
 	return(scorecard_field_organized)
 }
 
-CreateDBFromAccess <- function(min_year=2012) { 
+CreateDBFromAccess <- function(min_year=2014) { 
 	try({file.remove("data/db_IPEDS_access.sqlite")}, silent=TRUE)
 	db <- dbConnect(RSQLite::SQLite(), "data/db_IPEDS_access.sqlite")
 	temp_dir <- tempdir()
@@ -3149,14 +3294,7 @@ CreateComparisonNetwork <- function(placeholder, comparison_table) {
 
 #' Use azizka/speciesgeocodeR/ and WWF data to encode locations for habitat and biome
 WWFload <- function(x = NULL) {
-    if (missing(x)) {
-        x <- getwd()
-    }
-    download.file("http://assets.worldwildlife.org/publications/15/files/original/official_teow.zip", 
-        destfile = file.path(x, "wwf_ecoregions.zip"))
-    unzip(file.path(x, "wwf_ecoregions.zip"), exdir = file.path(x, "WWF_ecoregions"))
-    file.remove(file.path(x, "wwf_ecoregions.zip"))
-    wwf <- sf::st_read(file.path(x, "WWF_ecoregions", "official", 
+    wwf <- sf::st_read(file.path("external_data", "wwf_teow", 
         "wwf_terr_ecos.shp"))
     return(wwf)
 }

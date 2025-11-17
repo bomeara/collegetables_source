@@ -32,7 +32,6 @@ Below shows the percentage of tenure stream (those who have tenure or who are on
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 library(targets)
 library(plotly)
-library(magrittr)
 library(htmlwidgets)
 
 #tar_load(comparison_table)
@@ -51,7 +50,7 @@ all_there <- names(counts_of_schools)[which(counts_of_schools == max(counts_of_s
 
 comparison_table_main <- subset(comparison_table_stable, `UNITID Unique identification number of the institution` %in% all_there & `IPEDS Year` > 2015)
 
-fig <- comparison_table_main %>% 
+fig <- comparison_table_main |>
 	plot_ly(
 		x = ~`Graduation Rate Bachelors in within 150 percent of normal time Grand total`,
 		y = ~`Tenure-stream percent`,
@@ -62,7 +61,7 @@ fig <- comparison_table_main %>%
     	mode = 'markers',
 		size = ~undergrad_total,
 		color = ~`Institutional control or affiliation`
-	) %>% 
+	) |>
 	layout(
 		title = 'Proportion of tenure track instructors and graduation rate through time', 
 		 xaxis = list(title = 'Graduation rate (6 years)'), 

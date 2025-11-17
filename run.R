@@ -8,6 +8,9 @@ source("R/functions.R")
 
 #tar_invalidate(index_et_al)
 
+#tar_invalidate(db_from_access)
+#ar_invalidate(ipeds_directly)
+
 tar_option_set(memory = "transient", garbage_collection = TRUE)
 
 
