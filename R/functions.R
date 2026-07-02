@@ -3530,3 +3530,165 @@ SaveNameMatchFile <- function(comparison_table) {
 ExportShiny <- function(namematch_table, prediction_file) {
 	shinylive::export("predict_shiny", destdir="docs/predict", overwrite=TRUE)	
 }
+
+AggregateDataForFieldByCollege <- function(
+	institution_id,
+	comparison_table,
+	population_by_state_by_age,
+	college_chosen_comparison_table,
+	scorecard_field_organized
+) {
+	comparison_table <- comparison_table[
+		order(comparison_table$`IPEDS Year`, decreasing = TRUE),
+	]
+	focal_focal <- subset(
+		comparison_table,
+		comparison_table$`UNITID Unique identification number of the institution` ==
+			institution_id
+	)
+	focal_focal <- focal_focal[
+		order(focal_focal$`IPEDS Year`, decreasing = TRUE),
+	]
+
+	most_current_info <- apply(focal_focal, 2, FirstNaOmit)
+
+	index_focal_vector <- subset(
+		index_table,
+		index_table$UNITID == institution_id
+	)
+	college_chosen_comparison_vector <- subset(
+		college_chosen_comparison_table,
+		college_chosen_comparison_table$`focal` == institution_id
+	)
+
+	to_institutions <- strsplit(
+		college_chosen_comparison_vector$`to_all`,
+		", "
+	)[[1]]
+	from_institutions <- strsplit(
+		college_chosen_comparison_vector$`from_all`,
+		", "
+	)[[1]]
+	NCES_comparison_institutions <- strsplit(
+		college_chosen_comparison_vector$`NCES_comparison_group_members`,
+		", "
+	)[[1]]
+
+	any_comparison <- unique(c(
+		to_institutions,
+		NCES_comparison_institutions,
+		institution_id
+	))
+
+	index_table <- subset(index_table, index_table$UNITID %in% any_comparison)
+
+	db <- dbConnect(RSQLite::SQLite(), "data/db_IPEDS.sqlite")
+
+	completions_program <- tbl(db, "Completions_program") |> as.data.frame()
+	colnames(completions_program) <- gsub(
+		"  ",
+		" ",
+		gsub(
+			'\\.',
+			' ',
+			gsub("^[A-z]+\\.[A-Z0-9_]+\\.", "", colnames(completions_program))
+		)
+	)
+	completions_program <- subset(
+		completions_program,
+		completions_program$`UNITID Unique identification number of the institution` !=
+			"z"
+	) #kill the placeholder
+	completions_program$`IPEDS Year` <- as.numeric(
+		completions_program$`IPEDS Year`
+	)
+
+	dbDisconnect(db)
+
+	completions_program$Degree <- completions_program$`Award Level code`
+
+	completions_program$Degree[grepl(
+		"Doctor",
+		completions_program$Degree
+	)] <- "Doctorate"
+
+	completions_program$Degree[grepl(
+		"Certificate",
+		completions_program$Degree,
+		ignore.case = TRUE
+	)] <- "Certificate"
+
+	completions_program$Degree[grepl(
+		"Associate",
+		completions_program$Degree,
+		ignore.case = TRUE
+	)] <- "Associates"
+
+	completions_program$Degree[grepl(
+		"Bachelor",
+		completions_program$Degree,
+		ignore.case = TRUE
+	)] <- "Bachelors"
+
+	completions_program$Degree[grepl(
+		"Master",
+		completions_program$Degree,
+		ignore.case = TRUE
+	)] <- "Masters"
+
+	completions_program$Classification <- completions_program$`CIP Code  2020 Classification`
+
+	completions_program$Classification[is.na(
+		completions_program$Classification
+	)] <- completions_program$`CIP Code  2010 Classification`[is.na(
+		completions_program$Classification
+	)]
+
+	completions_program <- subset(
+		completions_program,
+		Classification != "Grand total"
+	)
+
+	colnames(completions_program)[grepl(
+		"UNITID",
+		colnames(completions_program)
+	)] <- "UNITID"
+
+	completions_comparisons <- completions_program[
+		completions_program$UNITID %in% any_comparison,
+	]
+
+	scorecard_field_organized_comparisons <- scorecard_field_organized[
+		scorecard_field_organized$UNITID %in% any_comparison,
+	]
+
+	scorecard_field_organized_comparisons_simpler <- dplyr::select(
+		scorecard_field_organized_comparisons,
+		UNITID,
+		Institution,
+		Field,
+		Degree,
+		Earnings.1.year.all,
+		Earnings.5.year.all
+	)
+
+	one_year <- c(!is.na(
+		scorecard_field_organized_comparisons_simpler$Earnings.1.year.all
+	))
+	five_year <- c(!is.na(
+		scorecard_field_organized_comparisons_simpler$Earnings.5.year.all
+	))
+	
+	scorecard_field_organized_comparisons_simpler <- scorecard_field_organized_comparisons_simpler[
+		apply(cbind(one_year, five_year), 1, any),
+	]
+
+
+	# to export:
+	# focal_focal (institution info)
+	# completions_program
+
+	# to graph:
+	# overall enrollment over time
+	# revenue
+}
