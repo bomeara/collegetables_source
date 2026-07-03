@@ -699,6 +699,62 @@ for(col_index in 2:ncol(local_summary)) {
   ) |> formatStyle(1:ncol(local_summary), 'vertical-align'='top')
 ```
 
+# Expense distribution
+
+Colleges have various expenses. How have they changed through time?
+
+```{r, eval=TRUE}
+figure_expenses_string <- ""
+try({
+
+	relevant_table <- focal_institutions_table |> subset(`UNITID Unique identification number of the institution` == params$institution_id) |> dplyr::select(`IPEDS Year`, `Total expenses Total amount`, `Academic support Total amount`, `Student service Total amount`, `Research Total amount`, `Instruction Total amount`, `Public service Total amount`, `Auxiliary enterprises Total amount`, `Net grant aid to students Total amount`)
+	
+	percentage_table <- data.frame(Year = relevant_table$`IPEDS Year`)
+	percentage_table$`Academic support` <- 100*relevant_table$`Academic support Total amount`/ relevant_table$`Total expenses Total amount`
+	percentage_table$`Student services` <- 100*relevant_table$`Student service Total amount`/ relevant_table$`Total expenses Total amount`
+	percentage_table$`Research` <- 100*relevant_table$`Research Total amount`/ relevant_table$`Total expenses Total amount`
+	percentage_table$`Instruction` <- 100*relevant_table$`Instruction Total amount`/ relevant_table$`Total expenses Total amount`
+	percentage_table$`Public service` <- 100*relevant_table$`Public service Total amount`/ relevant_table$`Total expenses Total amount`
+	percentage_table$`Auxiliary enterprises` <- 100*relevant_table$`Auxiliary enterprises Total amount`/ relevant_table$`Total expenses Total amount`
+	percentage_table$`Net grant aid to students` <- 100*relevant_table$`Net grant aid to students Total amount`/ relevant_table$`Total expenses Total amount`
+
+	percentage_tall <- pivot_longer(percentage_table, cols=!Year)
+	percentage_tall <- percentage_tall[!is.na(percentage_tall$value),]
+	last_points <- percentage_tall |>
+		dplyr::group_by(name) |>
+		dplyr::filter(Year == max(Year, na.rm = TRUE)) |>
+		dplyr::ungroup()
+	
+	break_x <- c(range(as.numeric(percentage_tall$Year)), 5+max(as.numeric(last_points$Year)))
+	
+	expenses_plot <- ggplot(percentage_tall, aes(x=as.numeric(Year), y=value, group=name, colour=name)) +
+		geom_line() + theme_minimal() +
+		geom_text_repel(data = last_points, aes(label = name), hjust = 0, nudge_x = 0.2, direction = "y", show.legend = FALSE) +
+		guides(colour='none') + labs(x="Year", y="Percentage", title="Percentage of expenses by source") +  scale_x_continuous(breaks = break_x, labels=c(break_x[1:2]," "), limits=range(break_x)) 
+		
+	expenses_percentage_filename_png <- paste0("images/", utils::URLencode(gsub(" ", "", params$institution_id)), "_expenses_percentage", ".png")
+
+
+	suppressWarnings(suppressMessages({
+		ggsave(
+			plot = expenses_plot,
+			filename = paste0('docs/', expenses_percentage_filename_png),
+			bg = "transparent",
+			width = 2000,
+			height= 1000,
+			units = "px"
+		)
+	}))
+
+	figure_expenses_string <- paste0('<img src=', expenses_percentage_filename_png, ' alt="Line plot showing expenses by category over time.">')
+	if(all(is.na(percentage_tall$value))) {
+		figure_expenses_string <- ""
+	}
+}, silent=TRUE)
+```
+
+`r figure_expenses_string`
+
 # Library
 
 Libraries are changing rapidly. Note that how institutions count digital collections may vary.
@@ -715,7 +771,7 @@ for (row_index in 1:nrow(local_summary)) {
 	raw_distribution <- raw_distribution[!is.na(raw_distribution)]
 	fn_ecdf <- NULL
 	if(length(raw_distribution)>0) {
-		fn_ecdf <- ecdf(raw_distribution)
+		fn_ecdf <- stats::ecdf(raw_distribution)
 	}
 	color_ramp <- color_ramp_neutral
 	try({
