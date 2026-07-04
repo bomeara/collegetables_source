@@ -701,22 +701,36 @@ for(col_index in 2:ncol(local_summary)) {
 
 # Expense distribution
 
-Colleges have various expenses. How have they changed through time?
+Colleges have various expenses, and the share of those has changed through time. A recent (July 1, 2026) [article](https://www.chronicle.com/article/the-faculty-workload-myth) suggested that faculty salaries tend to be decreasing as a component of all college expenses. This plot (if data are available) shows wages and salaries used for instruction (which include faculty and others supporting instruction), other instructional costs, and other costs as a percentage of a college's overall reported expenses each year.
 
 ```{r, eval=TRUE}
 figure_expenses_string <- ""
 try({
 
-	relevant_table <- focal_institutions_table |> subset(`UNITID Unique identification number of the institution` == params$institution_id) |> dplyr::select(`IPEDS Year`, `Total expenses Total amount`, `Academic support Total amount`, `Student service Total amount`, `Research Total amount`, `Instruction Total amount`, `Public service Total amount`, `Auxiliary enterprises Total amount`, `Net grant aid to students Total amount`)
+	relevant_table <- focal_institutions_table |> subset(`UNITID Unique identification number of the institution` == params$institution_id) |> dplyr::select(`IPEDS Year`, `Total expenses Total amount`, `Academic support Total amount`, `Academic support Salaries and wages`, `Student service Total amount`, `Research Total amount`, `Research Salaries and wages`, `Instruction Total amount`, `Instruction Salaries and wages`, `Public service Total amount`, `Auxiliary enterprises Total amount`, `Net grant aid to students Total amount`)
 	
 	percentage_table <- data.frame(Year = relevant_table$`IPEDS Year`)
 	percentage_table$`Academic support` <- 100*relevant_table$`Academic support Total amount`/ relevant_table$`Total expenses Total amount`
+
 	percentage_table$`Student services` <- 100*relevant_table$`Student service Total amount`/ relevant_table$`Total expenses Total amount`
-	percentage_table$`Research` <- 100*relevant_table$`Research Total amount`/ relevant_table$`Total expenses Total amount`
-	percentage_table$`Instruction` <- 100*relevant_table$`Instruction Total amount`/ relevant_table$`Total expenses Total amount`
+	percentage_table$`Research wages` <- 100*relevant_table$`Research Salaries and wages`/ relevant_table$`Total expenses Total amount`
+	percentage_table$`Research other` <- 100*(relevant_table$`Research Total amount` - relevant_table$`Research Salaries and wages`)/ relevant_table$`Total expenses Total amount`
+
+	percentage_table$`Instruction wages` <- 100*relevant_table$`Instruction Salaries and wages`/ relevant_table$`Total expenses Total amount`
+	percentage_table$`Instruction other` <- 100*(relevant_table$`Instruction Total amount` - relevant_table$`Instruction Salaries and wages`)/ relevant_table$`Total expenses Total amount`
 	percentage_table$`Public service` <- 100*relevant_table$`Public service Total amount`/ relevant_table$`Total expenses Total amount`
 	percentage_table$`Auxiliary enterprises` <- 100*relevant_table$`Auxiliary enterprises Total amount`/ relevant_table$`Total expenses Total amount`
 	percentage_table$`Net grant aid to students` <- 100*relevant_table$`Net grant aid to students Total amount`/ relevant_table$`Total expenses Total amount`
+	
+	to_cull <- c()
+	for (i in sequence(3:ncol(percentage_table))) {
+		if(max(percentage_table[,i], na.rm=TRUE)==0) {
+			to_cull <- c(to_cull, i)	
+		}
+	}
+	if(length(to_cull)>0) {
+		percentage_table <- percentage_table[,-to_cull]	
+	}
 
 	percentage_tall <- pivot_longer(percentage_table, cols=!Year)
 	percentage_tall <- percentage_tall[!is.na(percentage_tall$value),]
@@ -729,7 +743,7 @@ try({
 	
 	expenses_plot <- ggplot(percentage_tall, aes(x=as.numeric(Year), y=value, group=name, colour=name)) +
 		geom_line() + theme_minimal() +
-		geom_text_repel(data = last_points, aes(label = name), hjust = 0, nudge_x = 0.2, direction = "y", show.legend = FALSE) +
+		geom_text_repel(data = last_points, aes(label = name), hjust = 0, nudge_x = 0.2, direction = "y", show.legend = FALSE, segment.color = "darkgray") +
 		guides(colour='none') + labs(x="Year", y="Percentage", title="Percentage of expenses by source") +  scale_x_continuous(breaks = break_x, labels=c(break_x[1:2]," "), limits=range(break_x)) 
 		
 	expenses_percentage_filename_png <- paste0("images/", utils::URLencode(gsub(" ", "", params$institution_id)), "_expenses_percentage", ".png")
@@ -760,6 +774,7 @@ try({
 Libraries are changing rapidly. Note that how institutions count digital collections may vary.
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, error=TRUE, eval=TRUE}
+try({
 local_summary <- subset(final_summary, final_summary$Category=="Library facilities") |> dplyr::select(-Category)
 
 local_summary_raw <- subset(final_summary_raw, final_summary_raw$Category=="Library facilities") |> dplyr::select(-Category)
@@ -810,6 +825,7 @@ for (row_index in 1:nrow(local_summary)) {
 	  fixedColumns = list(leftColumns = 3)
    	 )
   ) |> formatStyle(1:ncol(local_summary), 'vertical-align'='top')
+}, silent=TRUE)
 ```
 
 
